@@ -1,0 +1,509 @@
+================================================================================
+PRINCIPAL COMPONENT ANALYSIS (PCA) REPORT - MASKED REGION ONLY
+Generated on: 2025-04-05 19:57:30
+================================================================================
+
+PCA Analysis for Excitation 300 nm (Masked Region Only)
+----------------------------------------
+Number of emission bands: 141
+Number of components needed for 95% variance: 44
+Percentage of variance explained by first component: 40.93%
+
+Top 5 Principal Components:
+PC1: 40.93% of variance
+PC2: 4.76% of variance
+PC3: 4.08% of variance
+PC4: 3.38% of variance
+PC5: 3.05% of variance
+
+PCA variance plot saved to: masked_pca_variance_ex300nm.png
+
+Most important emission bands according to PC1 (Masked Region):
+#1: 1014.9 nm (Loading: 0.0913)
+#2: 1019.4 nm (Loading: 0.0912)
+#3: 1024.0 nm (Loading: 0.0912)
+#4: 1010.4 nm (Loading: 0.0912)
+#5: 1028.5 nm (Loading: 0.0912)
+
+PCA loadings plot saved to: masked_pca_loadings_ex300nm.png
+
+PCA Analysis for Excitation 310 nm (Masked Region Only)
+----------------------------------------
+Number of emission bands: 141
+Number of components needed for 95% variance: 44
+Percentage of variance explained by first component: 40.73%
+
+Top 5 Principal Components:
+PC1: 40.73% of variance
+PC2: 4.75% of variance
+PC3: 4.08% of variance
+PC4: 3.35% of variance
+PC5: 3.02% of variance
+
+PCA variance plot saved to: masked_pca_variance_ex310nm.png
+
+Most important emission bands according to PC1 (Masked Region):
+#1: 1014.9 nm (Loading: 0.0914)
+#2: 1010.4 nm (Loading: 0.0914)
+#3: 1005.8 nm (Loading: 0.0914)
+#4: 1019.4 nm (Loading: 0.0914)
+#5: 1001.3 nm (Loading: 0.0912)
+
+PCA loadings plot saved to: masked_pca_loadings_ex310nm.png
+
+PCA Analysis for Excitation 320 nm (Masked Region Only)
+----------------------------------------
+Number of emission bands: 141
+Number of components needed for 95% variance: 44
+Percentage of variance explained by first component: 40.17%
+
+Top 5 Principal Components:
+PC1: 40.17% of variance
+PC2: 4.86% of variance
+PC3: 4.11% of variance
+PC4: 3.39% of variance
+PC5: 3.06% of variance
+
+PCA variance plot saved to: masked_pca_variance_ex320nm.png
+
+Most important emission bands according to PC1 (Masked Region):
+#1: 1010.4 nm (Loading: 0.0909)
+#2: 1019.4 nm (Loading: 0.0908)
+#3: 1005.8 nm (Loading: 0.0908)
+#4: 1014.9 nm (Loading: 0.0908)
+#5: 1024.0 nm (Loading: 0.0908)
+
+PCA loadings plot saved to: masked_pca_loadings_ex320nm.png
+
+PCA Analysis for Excitation 330 nm (Masked Region Only)
+----------------------------------------
+Number of emission bands: 141
+Number of components needed for 95% variance: 44
+Percentage of variance explained by first component: 39.77%
+
+Top 5 Principal Components:
+PC1: 39.77% of variance
+PC2: 4.86% of variance
+PC3: 4.13% of variance
+PC4: 3.47% of variance
+PC5: 3.08% of variance
+
+PCA variance plot saved to: masked_pca_variance_ex330nm.png
+
+Most important emission bands according to PC1 (Masked Region):
+#1: 1014.9 nm (Loading: 0.0917)
+#2: 1010.4 nm (Loading: 0.0917)
+#3: 1019.4 nm (Loading: 0.0915)
+#4: 1005.8 nm (Loading: 0.0915)
+#5: 1024.0 nm (Loading: 0.0913)
+
+PCA loadings plot saved to: masked_pca_loadings_ex330nm.png
+
+PCA Analysis for Excitation 340 nm (Masked Region Only)
+----------------------------------------
+Number of emission bands: 141
+Number of components needed for 95% variance: 44
+Percentage of variance explained by first component: 38.74%
+
+Top 5 Principal Components:
+PC1: 38.74% of variance
+PC2: 4.91% of variance
+PC3: 4.21% of variance
+PC4: 3.53% of variance
+PC5: 3.12% of variance
+
+PCA variance plot saved to: masked_pca_variance_ex340nm.png
+
+Most important emission bands according to PC1 (Masked Region):
+#1: 996.7 nm (Loading: 0.0920)
+#2: 1001.3 nm (Loading: 0.0920)
+#3: 1005.8 nm (Loading: 0.0920)
+#4: 992.1 nm (Loading: 0.0919)
+#5: 1010.4 nm (Loading: 0.0919)
+
+PCA loadings plot saved to: masked_pca_loadings_ex340nm.png
+
+PCA Analysis for Excitation 350 nm (Masked Region Only)
+----------------------------------------
+Number of emission bands: 141
+Number of components needed for 95% variance: 44
+Percentage of variance explained by first component: 38.41%
+
+Top 5 Principal Components:
+PC1: 38.41% of variance
+PC2: 4.92% of variance
+PC3: 4.27% of variance
+PC4: 3.47% of variance
+PC5: 3.17% of variance
+
+PCA variance plot saved to: masked_pca_variance_ex350nm.png
+
+Most important emission bands according to PC1 (Masked Region):
+#1: 1019.4 nm (Loading: 0.0915)
+#2: 1010.4 nm (Loading: 0.0915)
+#3: 1005.8 nm (Loading: 0.0915)
+#4: 1014.9 nm (Loading: 0.0915)
+#5: 1001.3 nm (Loading: 0.0914)
+
+PCA loadings plot saved to: masked_pca_loadings_ex350nm.png
+
+PCA Analysis for Excitation 360 nm (Masked Region Only)
+----------------------------------------
+Number of emission bands: 141
+Number of components needed for 95% variance: 45
+Percentage of variance explained by first component: 37.94%
+
+Top 5 Principal Components:
+PC1: 37.94% of variance
+PC2: 4.92% of variance
+PC3: 4.26% of variance
+PC4: 3.53% of variance
+PC5: 3.23% of variance
+
+PCA variance plot saved to: masked_pca_variance_ex360nm.png
+
+Most important emission bands according to PC1 (Masked Region):
+#1: 1014.9 nm (Loading: 0.0930)
+#2: 1019.4 nm (Loading: 0.0930)
+#3: 1010.4 nm (Loading: 0.0929)
+#4: 1024.0 nm (Loading: 0.0928)
+#5: 1005.8 nm (Loading: 0.0926)
+
+PCA loadings plot saved to: masked_pca_loadings_ex360nm.png
+
+PCA Analysis for Excitation 370 nm (Masked Region Only)
+----------------------------------------
+Number of emission bands: 141
+Number of components needed for 95% variance: 45
+Percentage of variance explained by first component: 37.29%
+
+Top 5 Principal Components:
+PC1: 37.29% of variance
+PC2: 5.06% of variance
+PC3: 4.36% of variance
+PC4: 3.59% of variance
+PC5: 3.18% of variance
+
+PCA variance plot saved to: masked_pca_variance_ex370nm.png
+
+Most important emission bands according to PC1 (Masked Region):
+#1: 1024.0 nm (Loading: 0.0914)
+#2: 1019.4 nm (Loading: 0.0914)
+#3: 1028.5 nm (Loading: 0.0914)
+#4: 1014.9 nm (Loading: 0.0913)
+#5: 1010.4 nm (Loading: 0.0913)
+
+PCA loadings plot saved to: masked_pca_loadings_ex370nm.png
+
+PCA Analysis for Excitation 380 nm (Masked Region Only)
+----------------------------------------
+Number of emission bands: 141
+Number of components needed for 95% variance: 45
+Percentage of variance explained by first component: 36.29%
+
+Top 5 Principal Components:
+PC1: 36.29% of variance
+PC2: 5.10% of variance
+PC3: 4.40% of variance
+PC4: 3.66% of variance
+PC5: 3.28% of variance
+
+PCA variance plot saved to: masked_pca_variance_ex380nm.png
+
+Most important emission bands according to PC1 (Masked Region):
+#1: 1019.4 nm (Loading: 0.0930)
+#2: 1014.9 nm (Loading: 0.0930)
+#3: 1010.4 nm (Loading: 0.0929)
+#4: 1024.0 nm (Loading: 0.0928)
+#5: 1005.8 nm (Loading: 0.0927)
+
+PCA loadings plot saved to: masked_pca_loadings_ex380nm.png
+
+PCA Analysis for Excitation 390 nm (Masked Region Only)
+----------------------------------------
+Number of emission bands: 141
+Number of components needed for 95% variance: 45
+Percentage of variance explained by first component: 36.22%
+
+Top 5 Principal Components:
+PC1: 36.22% of variance
+PC2: 5.12% of variance
+PC3: 4.33% of variance
+PC4: 3.62% of variance
+PC5: 3.24% of variance
+
+PCA variance plot saved to: masked_pca_variance_ex390nm.png
+
+Most important emission bands according to PC1 (Masked Region):
+#1: 1010.4 nm (Loading: 0.0929)
+#2: 1014.9 nm (Loading: 0.0928)
+#3: 1019.4 nm (Loading: 0.0927)
+#4: 1005.8 nm (Loading: 0.0927)
+#5: 1001.3 nm (Loading: 0.0926)
+
+PCA loadings plot saved to: masked_pca_loadings_ex390nm.png
+
+PCA Analysis for Excitation 400 nm (Masked Region Only)
+----------------------------------------
+Number of emission bands: 141
+Number of components needed for 95% variance: 43
+Percentage of variance explained by first component: 44.18%
+
+Top 5 Principal Components:
+PC1: 44.18% of variance
+PC2: 4.49% of variance
+PC3: 3.88% of variance
+PC4: 3.22% of variance
+PC5: 2.85% of variance
+
+PCA variance plot saved to: masked_pca_variance_ex400nm.png
+
+Most important emission bands according to PC1 (Masked Region):
+#1: 1001.3 nm (Loading: 0.0901)
+#2: 996.7 nm (Loading: 0.0901)
+#3: 1005.8 nm (Loading: 0.0901)
+#4: 992.1 nm (Loading: 0.0899)
+#5: 1010.4 nm (Loading: 0.0898)
+
+PCA loadings plot saved to: masked_pca_loadings_ex400nm.png
+
+PCA Analysis for Excitation 410 nm (Masked Region Only)
+----------------------------------------
+Number of emission bands: 141
+Number of components needed for 95% variance: 35
+Percentage of variance explained by first component: 59.50%
+
+Top 5 Principal Components:
+PC1: 59.50% of variance
+PC2: 3.56% of variance
+PC3: 2.89% of variance
+PC4: 2.37% of variance
+PC5: 2.28% of variance
+
+PCA variance plot saved to: masked_pca_variance_ex410nm.png
+
+Most important emission bands according to PC1 (Masked Region):
+#1: 411.0 nm (Loading: 0.0947)
+#2: 415.8 nm (Loading: 0.0943)
+#3: 406.2 nm (Loading: 0.0930)
+#4: 430.1 nm (Loading: 0.0926)
+#5: 435.0 nm (Loading: 0.0925)
+
+PCA loadings plot saved to: masked_pca_loadings_ex410nm.png
+
+PCA Analysis for Excitation 420 nm (Masked Region Only)
+----------------------------------------
+Number of emission bands: 141
+Number of components needed for 95% variance: 27
+Percentage of variance explained by first component: 68.88%
+
+Top 5 Principal Components:
+PC1: 68.88% of variance
+PC2: 3.46% of variance
+PC3: 2.58% of variance
+PC4: 2.06% of variance
+PC5: 1.98% of variance
+
+PCA variance plot saved to: masked_pca_variance_ex420nm.png
+
+Most important emission bands according to PC1 (Masked Region):
+#1: 401.4 nm (Loading: 0.0942)
+#2: 425.3 nm (Loading: 0.0942)
+#3: 420.5 nm (Loading: 0.0941)
+#4: 430.1 nm (Loading: 0.0927)
+#5: 415.8 nm (Loading: 0.0925)
+
+PCA loadings plot saved to: masked_pca_loadings_ex420nm.png
+
+PCA Analysis for Excitation 430 nm (Masked Region Only)
+----------------------------------------
+Number of emission bands: 141
+Number of components needed for 95% variance: 21
+Percentage of variance explained by first component: 74.51%
+
+Top 5 Principal Components:
+PC1: 74.51% of variance
+PC2: 3.32% of variance
+PC3: 2.17% of variance
+PC4: 1.97% of variance
+PC5: 1.69% of variance
+
+PCA variance plot saved to: masked_pca_variance_ex430nm.png
+
+Most important emission bands according to PC1 (Masked Region):
+#1: 630.6 nm (Loading: 0.0927)
+#2: 635.5 nm (Loading: 0.0926)
+#3: 620.7 nm (Loading: 0.0926)
+#4: 625.6 nm (Loading: 0.0926)
+#5: 615.8 nm (Loading: 0.0926)
+
+PCA loadings plot saved to: masked_pca_loadings_ex430nm.png
+
+PCA Analysis for Excitation 440 nm (Masked Region Only)
+----------------------------------------
+Number of emission bands: 141
+Number of components needed for 95% variance: 22
+Percentage of variance explained by first component: 73.75%
+
+Top 5 Principal Components:
+PC1: 73.75% of variance
+PC2: 3.20% of variance
+PC3: 2.37% of variance
+PC4: 2.02% of variance
+PC5: 1.72% of variance
+
+PCA variance plot saved to: masked_pca_variance_ex440nm.png
+
+Most important emission bands according to PC1 (Masked Region):
+#1: 444.6 nm (Loading: 0.0929)
+#2: 411.0 nm (Loading: 0.0926)
+#3: 650.3 nm (Loading: 0.0926)
+#4: 660.2 nm (Loading: 0.0926)
+#5: 645.4 nm (Loading: 0.0925)
+
+PCA loadings plot saved to: masked_pca_loadings_ex440nm.png
+
+PCA Analysis for Excitation 450 nm (Masked Region Only)
+----------------------------------------
+Number of emission bands: 141
+Number of components needed for 95% variance: 21
+Percentage of variance explained by first component: 73.67%
+
+Top 5 Principal Components:
+PC1: 73.67% of variance
+PC2: 3.77% of variance
+PC3: 2.47% of variance
+PC4: 1.98% of variance
+PC5: 1.84% of variance
+
+PCA variance plot saved to: masked_pca_variance_ex450nm.png
+
+Most important emission bands according to PC1 (Masked Region):
+#1: 459.1 nm (Loading: 0.0908)
+#2: 454.2 nm (Loading: 0.0906)
+#3: 463.9 nm (Loading: 0.0905)
+#4: 449.4 nm (Loading: 0.0898)
+#5: 468.8 nm (Loading: 0.0897)
+
+PCA loadings plot saved to: masked_pca_loadings_ex450nm.png
+
+PCA Analysis for Excitation 460 nm (Masked Region Only)
+----------------------------------------
+Number of emission bands: 141
+Number of components needed for 95% variance: 18
+Percentage of variance explained by first component: 76.67%
+
+Top 5 Principal Components:
+PC1: 76.67% of variance
+PC2: 4.34% of variance
+PC3: 2.21% of variance
+PC4: 1.78% of variance
+PC5: 1.50% of variance
+
+PCA variance plot saved to: masked_pca_variance_ex460nm.png
+
+Most important emission bands according to PC1 (Masked Region):
+#1: 468.8 nm (Loading: 0.0891)
+#2: 473.6 nm (Loading: 0.0890)
+#3: 714.4 nm (Loading: 0.0889)
+#4: 709.4 nm (Loading: 0.0888)
+#5: 478.5 nm (Loading: 0.0888)
+
+PCA loadings plot saved to: masked_pca_loadings_ex460nm.png
+
+PCA Analysis for Excitation 470 nm (Masked Region Only)
+----------------------------------------
+Number of emission bands: 141
+Number of components needed for 95% variance: 16
+Percentage of variance explained by first component: 80.62%
+
+Top 5 Principal Components:
+PC1: 80.62% of variance
+PC2: 3.54% of variance
+PC3: 2.00% of variance
+PC4: 1.42% of variance
+PC5: 1.31% of variance
+
+PCA variance plot saved to: masked_pca_variance_ex470nm.png
+
+Most important emission bands according to PC1 (Masked Region):
+#1: 729.1 nm (Loading: 0.0873)
+#2: 430.1 nm (Loading: 0.0873)
+#3: 734.0 nm (Loading: 0.0872)
+#4: 478.5 nm (Loading: 0.0872)
+#5: 488.2 nm (Loading: 0.0872)
+
+PCA loadings plot saved to: masked_pca_loadings_ex470nm.png
+
+PCA Analysis for Excitation 480 nm (Masked Region Only)
+----------------------------------------
+Number of emission bands: 141
+Number of components needed for 95% variance: 15
+Percentage of variance explained by first component: 81.10%
+
+Top 5 Principal Components:
+PC1: 81.10% of variance
+PC2: 3.16% of variance
+PC3: 2.10% of variance
+PC4: 1.66% of variance
+PC5: 1.36% of variance
+
+PCA variance plot saved to: masked_pca_variance_ex480nm.png
+
+Most important emission bands according to PC1 (Masked Region):
+#1: 439.8 nm (Loading: 0.0882)
+#2: 435.0 nm (Loading: 0.0878)
+#3: 444.6 nm (Loading: 0.0877)
+#4: 401.4 nm (Loading: 0.0874)
+#5: 430.1 nm (Loading: 0.0874)
+
+PCA loadings plot saved to: masked_pca_loadings_ex480nm.png
+
+PCA Analysis for Excitation 490 nm (Masked Region Only)
+----------------------------------------
+Number of emission bands: 141
+Number of components needed for 95% variance: 13
+Percentage of variance explained by first component: 82.35%
+
+Top 5 Principal Components:
+PC1: 82.35% of variance
+PC2: 3.27% of variance
+PC3: 2.38% of variance
+PC4: 1.56% of variance
+PC5: 1.17% of variance
+
+PCA variance plot saved to: masked_pca_variance_ex490nm.png
+
+Most important emission bands according to PC1 (Masked Region):
+#1: 449.4 nm (Loading: 0.0880)
+#2: 444.6 nm (Loading: 0.0880)
+#3: 439.8 nm (Loading: 0.0875)
+#4: 738.9 nm (Loading: 0.0874)
+#5: 734.0 nm (Loading: 0.0874)
+
+PCA loadings plot saved to: masked_pca_loadings_ex490nm.png
+
+PCA Analysis for Excitation 500 nm (Masked Region Only)
+----------------------------------------
+Number of emission bands: 141
+Number of components needed for 95% variance: 11
+Percentage of variance explained by first component: 84.27%
+
+Top 5 Principal Components:
+PC1: 84.27% of variance
+PC2: 3.59% of variance
+PC3: 1.88% of variance
+PC4: 1.26% of variance
+PC5: 0.95% of variance
+
+PCA variance plot saved to: masked_pca_variance_ex500nm.png
+
+Most important emission bands according to PC1 (Masked Region):
+#1: 738.9 nm (Loading: 0.0880)
+#2: 743.8 nm (Loading: 0.0879)
+#3: 734.0 nm (Loading: 0.0879)
+#4: 748.7 nm (Loading: 0.0878)
+#5: 729.1 nm (Loading: 0.0877)
+
+PCA loadings plot saved to: masked_pca_loadings_ex500nm.png
+

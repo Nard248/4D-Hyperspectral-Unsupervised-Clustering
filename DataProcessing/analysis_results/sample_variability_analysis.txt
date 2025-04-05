@@ -1,0 +1,488 @@
+================================================================================
+SAMPLE VARIABILITY ANALYSIS REPORT
+Generated on: 2025-04-05 18:49:27
+================================================================================
+
+Sample Variability for Excitation 300 nm
+----------------------------------------
+Number of samples: 10
+Mean coefficient of variation: 50.83%
+Median coefficient of variation: 50.11%
+Maximum coefficient of variation: 163.51%
+
+Most stable emission bands (lowest CV):
+#1: 411.0 nm (CV: 49.26%)
+#2: 406.2 nm (CV: 49.29%)
+#3: 415.8 nm (CV: 49.31%)
+#4: 401.4 nm (CV: 49.31%)
+#5: 420.5 nm (CV: 49.32%)
+
+Most variable emission bands (highest CV):
+#1: 1072.9 nm (CV: 53.35%)
+#2: 1068.5 nm (CV: 53.31%)
+#3: 1064.1 nm (CV: 53.26%)
+#4: 1059.7 nm (CV: 53.20%)
+#5: 1055.3 nm (CV: 53.14%)
+
+Variability plot saved to: sample_variability_ex300nm.png
+
+Sample Variability for Excitation 310 nm
+----------------------------------------
+Number of samples: 10
+Mean coefficient of variation: 50.81%
+Median coefficient of variation: 50.08%
+Maximum coefficient of variation: 165.70%
+
+Most stable emission bands (lowest CV):
+#1: 406.2 nm (CV: 49.25%)
+#2: 415.8 nm (CV: 49.28%)
+#3: 401.4 nm (CV: 49.29%)
+#4: 411.0 nm (CV: 49.30%)
+#5: 430.1 nm (CV: 49.33%)
+
+Most variable emission bands (highest CV):
+#1: 1072.9 nm (CV: 53.31%)
+#2: 1068.5 nm (CV: 53.26%)
+#3: 1064.1 nm (CV: 53.21%)
+#4: 1059.7 nm (CV: 53.17%)
+#5: 1055.3 nm (CV: 53.13%)
+
+Variability plot saved to: sample_variability_ex310nm.png
+
+Sample Variability for Excitation 320 nm
+----------------------------------------
+Number of samples: 10
+Mean coefficient of variation: 50.79%
+Median coefficient of variation: 50.06%
+Maximum coefficient of variation: 183.62%
+
+Most stable emission bands (lowest CV):
+#1: 401.4 nm (CV: 49.24%)
+#2: 430.1 nm (CV: 49.29%)
+#3: 406.2 nm (CV: 49.30%)
+#4: 411.0 nm (CV: 49.32%)
+#5: 435.0 nm (CV: 49.32%)
+
+Most variable emission bands (highest CV):
+#1: 1072.9 nm (CV: 53.24%)
+#2: 1068.5 nm (CV: 53.19%)
+#3: 1064.1 nm (CV: 53.15%)
+#4: 1059.7 nm (CV: 53.10%)
+#5: 1055.3 nm (CV: 53.07%)
+
+Variability plot saved to: sample_variability_ex320nm.png
+
+Sample Variability for Excitation 330 nm
+----------------------------------------
+Number of samples: 10
+Mean coefficient of variation: 50.77%
+Median coefficient of variation: 50.04%
+Maximum coefficient of variation: 178.11%
+
+Most stable emission bands (lowest CV):
+#1: 411.0 nm (CV: 49.25%)
+#2: 406.2 nm (CV: 49.26%)
+#3: 401.4 nm (CV: 49.29%)
+#4: 425.3 nm (CV: 49.30%)
+#5: 415.8 nm (CV: 49.32%)
+
+Most variable emission bands (highest CV):
+#1: 1072.9 nm (CV: 53.25%)
+#2: 1068.5 nm (CV: 53.20%)
+#3: 1064.1 nm (CV: 53.15%)
+#4: 1059.7 nm (CV: 53.10%)
+#5: 1055.3 nm (CV: 53.06%)
+
+Variability plot saved to: sample_variability_ex330nm.png
+
+Sample Variability for Excitation 340 nm
+----------------------------------------
+Number of samples: 10
+Mean coefficient of variation: 50.75%
+Median coefficient of variation: 50.00%
+Maximum coefficient of variation: 154.36%
+
+Most stable emission bands (lowest CV):
+#1: 411.0 nm (CV: 49.23%)
+#2: 401.4 nm (CV: 49.26%)
+#3: 406.2 nm (CV: 49.29%)
+#4: 420.5 nm (CV: 49.29%)
+#5: 415.8 nm (CV: 49.30%)
+
+Most variable emission bands (highest CV):
+#1: 1072.9 nm (CV: 53.20%)
+#2: 1068.5 nm (CV: 53.15%)
+#3: 1064.1 nm (CV: 53.11%)
+#4: 1059.7 nm (CV: 53.06%)
+#5: 1055.3 nm (CV: 53.01%)
+
+Variability plot saved to: sample_variability_ex340nm.png
+
+Sample Variability for Excitation 350 nm
+----------------------------------------
+Number of samples: 10
+Mean coefficient of variation: 50.73%
+Median coefficient of variation: 50.00%
+Maximum coefficient of variation: 154.54%
+
+Most stable emission bands (lowest CV):
+#1: 401.4 nm (CV: 49.18%)
+#2: 406.2 nm (CV: 49.24%)
+#3: 411.0 nm (CV: 49.26%)
+#4: 425.3 nm (CV: 49.27%)
+#5: 415.8 nm (CV: 49.29%)
+
+Most variable emission bands (highest CV):
+#1: 1072.9 nm (CV: 53.14%)
+#2: 1068.5 nm (CV: 53.09%)
+#3: 1064.1 nm (CV: 53.05%)
+#4: 1059.7 nm (CV: 53.02%)
+#5: 1055.3 nm (CV: 52.98%)
+
+Variability plot saved to: sample_variability_ex350nm.png
+
+Sample Variability for Excitation 360 nm
+----------------------------------------
+Number of samples: 10
+Mean coefficient of variation: 50.72%
+Median coefficient of variation: 50.00%
+Maximum coefficient of variation: 180.15%
+
+Most stable emission bands (lowest CV):
+#1: 401.4 nm (CV: 49.24%)
+#2: 406.2 nm (CV: 49.25%)
+#3: 425.3 nm (CV: 49.29%)
+#4: 420.5 nm (CV: 49.29%)
+#5: 415.8 nm (CV: 49.31%)
+
+Most variable emission bands (highest CV):
+#1: 1072.9 nm (CV: 53.14%)
+#2: 1068.5 nm (CV: 53.10%)
+#3: 1064.1 nm (CV: 53.05%)
+#4: 1059.7 nm (CV: 53.00%)
+#5: 1055.3 nm (CV: 52.93%)
+
+Variability plot saved to: sample_variability_ex360nm.png
+
+Sample Variability for Excitation 370 nm
+----------------------------------------
+Number of samples: 10
+Mean coefficient of variation: 50.70%
+Median coefficient of variation: 49.99%
+Maximum coefficient of variation: 156.85%
+
+Most stable emission bands (lowest CV):
+#1: 401.4 nm (CV: 49.22%)
+#2: 406.2 nm (CV: 49.24%)
+#3: 415.8 nm (CV: 49.25%)
+#4: 420.5 nm (CV: 49.26%)
+#5: 411.0 nm (CV: 49.27%)
+
+Most variable emission bands (highest CV):
+#1: 1072.9 nm (CV: 53.06%)
+#2: 1068.5 nm (CV: 53.02%)
+#3: 1064.1 nm (CV: 52.98%)
+#4: 1059.7 nm (CV: 52.94%)
+#5: 1055.3 nm (CV: 52.90%)
+
+Variability plot saved to: sample_variability_ex370nm.png
+
+Sample Variability for Excitation 380 nm
+----------------------------------------
+Number of samples: 10
+Mean coefficient of variation: 50.68%
+Median coefficient of variation: 49.98%
+Maximum coefficient of variation: 161.66%
+
+Most stable emission bands (lowest CV):
+#1: 401.4 nm (CV: 49.23%)
+#2: 449.4 nm (CV: 49.25%)
+#3: 406.2 nm (CV: 49.26%)
+#4: 411.0 nm (CV: 49.28%)
+#5: 435.0 nm (CV: 49.28%)
+
+Most variable emission bands (highest CV):
+#1: 1072.9 nm (CV: 53.03%)
+#2: 1068.5 nm (CV: 52.97%)
+#3: 1064.1 nm (CV: 52.91%)
+#4: 1059.7 nm (CV: 52.86%)
+#5: 1055.3 nm (CV: 52.82%)
+
+Variability plot saved to: sample_variability_ex380nm.png
+
+Sample Variability for Excitation 390 nm
+----------------------------------------
+Number of samples: 10
+Mean coefficient of variation: 50.66%
+Median coefficient of variation: 49.97%
+Maximum coefficient of variation: 159.90%
+
+Most stable emission bands (lowest CV):
+#1: 401.4 nm (CV: 49.21%)
+#2: 406.2 nm (CV: 49.23%)
+#3: 415.8 nm (CV: 49.25%)
+#4: 425.3 nm (CV: 49.26%)
+#5: 411.0 nm (CV: 49.26%)
+
+Most variable emission bands (highest CV):
+#1: 1072.9 nm (CV: 52.99%)
+#2: 1068.5 nm (CV: 52.95%)
+#3: 1064.1 nm (CV: 52.89%)
+#4: 1059.7 nm (CV: 52.86%)
+#5: 1055.3 nm (CV: 52.81%)
+
+Variability plot saved to: sample_variability_ex390nm.png
+
+Sample Variability for Excitation 400 nm
+----------------------------------------
+Number of samples: 10
+Mean coefficient of variation: 50.60%
+Median coefficient of variation: 49.91%
+Maximum coefficient of variation: 154.63%
+
+Most stable emission bands (lowest CV):
+#1: 401.4 nm (CV: 49.09%)
+#2: 406.2 nm (CV: 49.16%)
+#3: 420.5 nm (CV: 49.17%)
+#4: 425.3 nm (CV: 49.21%)
+#5: 415.8 nm (CV: 49.22%)
+
+Most variable emission bands (highest CV):
+#1: 1072.9 nm (CV: 52.85%)
+#2: 1068.5 nm (CV: 52.80%)
+#3: 1064.1 nm (CV: 52.75%)
+#4: 1059.7 nm (CV: 52.70%)
+#5: 1055.3 nm (CV: 52.66%)
+
+Variability plot saved to: sample_variability_ex400nm.png
+
+Sample Variability for Excitation 410 nm
+----------------------------------------
+Number of samples: 10
+Mean coefficient of variation: 50.44%
+Median coefficient of variation: 49.76%
+Maximum coefficient of variation: 151.86%
+
+Most stable emission bands (lowest CV):
+#1: 406.2 nm (CV: 47.90%)
+#2: 411.0 nm (CV: 48.14%)
+#3: 401.4 nm (CV: 48.46%)
+#4: 415.8 nm (CV: 48.55%)
+#5: 435.0 nm (CV: 48.91%)
+
+Most variable emission bands (highest CV):
+#1: 1072.9 nm (CV: 52.68%)
+#2: 1068.5 nm (CV: 52.64%)
+#3: 1064.1 nm (CV: 52.59%)
+#4: 1059.7 nm (CV: 52.55%)
+#5: 1055.3 nm (CV: 52.52%)
+
+Variability plot saved to: sample_variability_ex410nm.png
+
+Sample Variability for Excitation 420 nm
+----------------------------------------
+Number of samples: 10
+Mean coefficient of variation: 50.26%
+Median coefficient of variation: 49.59%
+Maximum coefficient of variation: 161.52%
+
+Most stable emission bands (lowest CV):
+#1: 415.8 nm (CV: 46.96%)
+#2: 420.5 nm (CV: 47.33%)
+#3: 401.4 nm (CV: 47.48%)
+#4: 411.0 nm (CV: 47.53%)
+#5: 425.3 nm (CV: 48.00%)
+
+Most variable emission bands (highest CV):
+#1: 1072.9 nm (CV: 52.48%)
+#2: 1068.5 nm (CV: 52.45%)
+#3: 1064.1 nm (CV: 52.40%)
+#4: 1059.7 nm (CV: 52.36%)
+#5: 1055.3 nm (CV: 52.33%)
+
+Variability plot saved to: sample_variability_ex420nm.png
+
+Sample Variability for Excitation 430 nm
+----------------------------------------
+Number of samples: 10
+Mean coefficient of variation: 49.99%
+Median coefficient of variation: 49.38%
+Maximum coefficient of variation: 198.96%
+
+Most stable emission bands (lowest CV):
+#1: 425.3 nm (CV: 45.98%)
+#2: 406.2 nm (CV: 46.36%)
+#3: 420.5 nm (CV: 46.41%)
+#4: 430.1 nm (CV: 46.41%)
+#5: 401.4 nm (CV: 46.73%)
+
+Most variable emission bands (highest CV):
+#1: 1072.9 nm (CV: 52.44%)
+#2: 1068.5 nm (CV: 52.39%)
+#3: 1064.1 nm (CV: 52.33%)
+#4: 1059.7 nm (CV: 52.29%)
+#5: 1055.3 nm (CV: 52.26%)
+
+Variability plot saved to: sample_variability_ex430nm.png
+
+Sample Variability for Excitation 440 nm
+----------------------------------------
+Number of samples: 10
+Mean coefficient of variation: 49.85%
+Median coefficient of variation: 49.29%
+Maximum coefficient of variation: 300.00%
+
+Most stable emission bands (lowest CV):
+#1: 435.0 nm (CV: 44.74%)
+#2: 430.1 nm (CV: 45.22%)
+#3: 439.8 nm (CV: 45.26%)
+#4: 411.0 nm (CV: 45.81%)
+#5: 444.6 nm (CV: 45.81%)
+
+Most variable emission bands (highest CV):
+#1: 1072.9 nm (CV: 52.31%)
+#2: 1068.5 nm (CV: 52.27%)
+#3: 1064.1 nm (CV: 52.25%)
+#4: 1059.7 nm (CV: 52.21%)
+#5: 1055.3 nm (CV: 52.17%)
+
+Variability plot saved to: sample_variability_ex440nm.png
+
+Sample Variability for Excitation 450 nm
+----------------------------------------
+Number of samples: 10
+Mean coefficient of variation: 49.82%
+Median coefficient of variation: 49.14%
+Maximum coefficient of variation: 300.00%
+
+Most stable emission bands (lowest CV):
+#1: 444.6 nm (CV: 43.51%)
+#2: 439.8 nm (CV: 43.94%)
+#3: 449.4 nm (CV: 44.15%)
+#4: 454.2 nm (CV: 44.54%)
+#5: 459.1 nm (CV: 45.28%)
+
+Most variable emission bands (highest CV):
+#1: 1072.9 nm (CV: 52.30%)
+#2: 1068.5 nm (CV: 52.28%)
+#3: 1064.1 nm (CV: 52.25%)
+#4: 1059.7 nm (CV: 52.21%)
+#5: 1055.3 nm (CV: 52.17%)
+
+Variability plot saved to: sample_variability_ex450nm.png
+
+Sample Variability for Excitation 460 nm
+----------------------------------------
+Number of samples: 10
+Mean coefficient of variation: 49.17%
+Median coefficient of variation: 48.77%
+Maximum coefficient of variation: 300.00%
+
+Most stable emission bands (lowest CV):
+#1: 454.2 nm (CV: 42.39%)
+#2: 449.4 nm (CV: 42.61%)
+#3: 459.1 nm (CV: 43.16%)
+#4: 463.9 nm (CV: 43.45%)
+#5: 468.8 nm (CV: 44.03%)
+
+Most variable emission bands (highest CV):
+#1: 1072.9 nm (CV: 51.78%)
+#2: 1068.5 nm (CV: 51.75%)
+#3: 1064.1 nm (CV: 51.73%)
+#4: 1059.7 nm (CV: 51.70%)
+#5: 1055.3 nm (CV: 51.67%)
+
+Variability plot saved to: sample_variability_ex460nm.png
+
+Sample Variability for Excitation 470 nm
+----------------------------------------
+Number of samples: 10
+Mean coefficient of variation: 49.32%
+Median coefficient of variation: 48.45%
+Maximum coefficient of variation: 300.00%
+
+Most stable emission bands (lowest CV):
+#1: 459.1 nm (CV: 41.24%)
+#2: 463.9 nm (CV: 41.68%)
+#3: 473.6 nm (CV: 42.53%)
+#4: 468.8 nm (CV: 42.65%)
+#5: 454.2 nm (CV: 42.69%)
+
+Most variable emission bands (highest CV):
+#1: 917.6 nm (CV: 56.63%)
+#2: 912.9 nm (CV: 56.61%)
+#3: 922.4 nm (CV: 56.60%)
+#4: 908.2 nm (CV: 56.57%)
+#5: 903.4 nm (CV: 56.54%)
+
+Variability plot saved to: sample_variability_ex470nm.png
+
+Sample Variability for Excitation 480 nm
+----------------------------------------
+Number of samples: 10
+Mean coefficient of variation: 49.42%
+Median coefficient of variation: 48.47%
+Maximum coefficient of variation: 300.00%
+
+Most stable emission bands (lowest CV):
+#1: 468.8 nm (CV: 41.39%)
+#2: 473.6 nm (CV: 41.92%)
+#3: 463.9 nm (CV: 42.40%)
+#4: 478.5 nm (CV: 43.00%)
+#5: 483.3 nm (CV: 43.01%)
+
+Most variable emission bands (highest CV):
+#1: 912.9 nm (CV: 56.02%)
+#2: 908.2 nm (CV: 56.01%)
+#3: 903.4 nm (CV: 55.96%)
+#4: 917.6 nm (CV: 55.94%)
+#5: 898.7 nm (CV: 55.87%)
+
+Variability plot saved to: sample_variability_ex480nm.png
+
+Sample Variability for Excitation 490 nm
+----------------------------------------
+Number of samples: 10
+Mean coefficient of variation: 48.01%
+Median coefficient of variation: 48.09%
+Maximum coefficient of variation: 300.00%
+
+Most stable emission bands (lowest CV):
+#1: 478.5 nm (CV: 40.96%)
+#2: 483.3 nm (CV: 41.60%)
+#3: 473.6 nm (CV: 41.79%)
+#4: 488.2 nm (CV: 42.84%)
+#5: 493.1 nm (CV: 42.88%)
+
+Most variable emission bands (highest CV):
+#1: 1072.9 nm (CV: 50.89%)
+#2: 1068.5 nm (CV: 50.86%)
+#3: 1064.1 nm (CV: 50.83%)
+#4: 1059.7 nm (CV: 50.80%)
+#5: 1055.3 nm (CV: 50.77%)
+
+Variability plot saved to: sample_variability_ex490nm.png
+
+Sample Variability for Excitation 500 nm
+----------------------------------------
+Number of samples: 10
+Mean coefficient of variation: 48.64%
+Median coefficient of variation: 47.96%
+Maximum coefficient of variation: 300.00%
+
+Most stable emission bands (lowest CV):
+#1: 488.2 nm (CV: 41.72%)
+#2: 483.3 nm (CV: 41.91%)
+#3: 493.1 nm (CV: 42.44%)
+#4: 502.8 nm (CV: 43.04%)
+#5: 507.7 nm (CV: 43.13%)
+
+Most variable emission bands (highest CV):
+#1: 870.1 nm (CV: 57.15%)
+#2: 874.9 nm (CV: 57.09%)
+#3: 865.3 nm (CV: 57.07%)
+#4: 860.5 nm (CV: 56.98%)
+#5: 855.7 nm (CV: 56.84%)
+
+Variability plot saved to: sample_variability_ex500nm.png
+
