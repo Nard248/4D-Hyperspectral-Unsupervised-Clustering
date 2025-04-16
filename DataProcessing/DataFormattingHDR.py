@@ -140,8 +140,8 @@ def organize_data_by_excitation(base_path):
     organized_data = {}
 
     # Find all folders
-    folders = glob.glob(os.path.join(base_path, "Kiwi 2_03-25_*_*"))
-
+    folders = glob.glob(os.path.join(base_path, "Ki2i Experiment 2_04-15_*_*"))
+    print(folders)
     for folder in folders:
         folder_name = os.path.basename(folder)
         excitation_wavelength, index = extract_info_from_folder_name(folder_name)
@@ -272,14 +272,14 @@ def read_from_hdf5(file_path):
 
 def main():
     # Base path containing all the data folders
-    base_path = "C:\\Users\\meloy\\Desktop\\Kiwi 2"
+    base_path = r"C:\Users\meloy\Downloads\Kiwi Experiment 3\Kiwi Experiment 2"
 
     # Organize the data
     print("Organizing hyperspectral data...")
     organized_data = organize_data_by_excitation(base_path)
 
     # Save to HDF5
-    output_file = "kiwi_hyperspectral_4d_data.h5"
+    output_file = "kiwi_hyperspectral_4d_data_test.h5"
     print(f"Saving data to {output_file}...")
     save_to_hdf5(organized_data, output_file)
 
