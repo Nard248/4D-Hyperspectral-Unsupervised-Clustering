@@ -167,4 +167,6 @@ cython_debug/
 *.pkl
 *.npy
 *.png
-
+*.im3
+*.TRQ
+*.xlsx
