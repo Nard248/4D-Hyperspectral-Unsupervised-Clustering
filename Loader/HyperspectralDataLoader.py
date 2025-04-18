@@ -10,8 +10,8 @@ from typing import Optional, Tuple, Dict, List, Union, Any
 import pickle
 from scipy import ndimage
 from sklearn.decomposition import PCA, FastICA, NMF
+import copy
 import warnings
-
 
 class HyperspectralDataLoader:
     """
@@ -23,7 +23,7 @@ class HyperspectralDataLoader:
     def __init__(self,
                  data_path: Optional[str] = None,
                  metadata_path: Optional[str] = None,
-                 cutoff_offset: int = 30,
+                 cutoff_offset: int = 20,
                  use_fiji: bool = True,
                  verbose: bool = True):
         """
@@ -980,3 +980,311 @@ class HyperspectralDataLoader:
             print(f"    Cube shape: {details['cube_shape']}")
             print(f"    Emission range: {details['emission_range']} nm")
             print(f"    Number of emission bands: {details['num_emission_bands']}")
+
+
+def create_excitation_emission_dataframe(data_dict: Dict,
+                                        sample_size: Optional[int] = None) -> pd.DataFrame:
+    """
+    Transform 4D hyperspectral data into a 2D dataframe.
+
+    Args:
+        data_dict: Dictionary containing hyperspectral data
+        sample_size: Optional number of random pixels to sample (for large datasets)
+
+    Returns:
+        DataFrame with x, y coordinates and intensity values for each valid excitation-emission combination
+    """
+    # First, collect all valid excitation-emission combinations
+    valid_combinations = []
+    all_excitations = []
+
+    # Check what excitations we actually have in the data
+    for ex_str in data_dict['data'].keys():
+        excitation = float(ex_str)
+        all_excitations.append(excitation)
+
+        # Get the valid emission wavelengths for this excitation
+        emissions = data_dict['data'][ex_str]['wavelengths']
+
+        # Add all valid combinations to our list
+        for emission in emissions:
+            col_name = f"{int(emission)}-{int(excitation)}"
+            valid_combinations.append((excitation, emission, col_name))
+
+    print(f"Found {len(all_excitations)} excitation wavelengths")
+    print(f"Generated {len(valid_combinations)} valid excitation-emission combinations")
+
+    # Create an empty dataframe with x, y coordinates
+    # First, determine the dimensions of our data
+    first_ex = str(all_excitations[0])
+    cube_shape = data_dict['data'][first_ex]['cube'].shape
+    height, width = cube_shape[0], cube_shape[1]
+
+    print(f"Image dimensions: {height} x {width} pixels")
+
+    # Initialize the dataframe with columns for x and y coordinates
+    total_pixels = height * width
+
+    # Create coordinate arrays - this is the correct way to flatten spatial dimensions
+    # Create a meshgrid of coordinates
+    y_coords, x_coords = np.mgrid[0:height, 0:width]
+
+    # Flatten the coordinates
+    x_coords = x_coords.flatten()
+    y_coords = y_coords.flatten()
+
+    # Create initial dataframe with coordinates
+    df = pd.DataFrame({
+        'x': x_coords,
+        'y': y_coords
+    })
+
+    # If sample_size is provided, take a random sample of pixels
+    if sample_size is not None and sample_size < len(df):
+        df = df.sample(n=sample_size, random_state=42)
+        print(f"Sampled {sample_size} pixels out of {total_pixels}")
+
+    print(f"Created initial dataframe with {len(df)} rows")
+
+    # Now, fill in the intensity values for each valid combination
+    for excitation, emission, col_name in valid_combinations:
+        # Get the data cube for this excitation
+        ex_str = str(excitation)
+        cube = data_dict['data'][ex_str]['cube']
+        wavelengths = data_dict['data'][ex_str]['wavelengths']
+
+        # Find the index of this emission wavelength
+        try:
+            em_idx = wavelengths.index(emission)
+
+            # Extract the intensity values for this emission wavelength
+            # For the sampled rows only
+            if sample_size is not None and sample_size < total_pixels:
+                # Get the x, y coordinates of the sampled pixels
+                sampled_coords = df[['x', 'y']].values
+                # Extract intensity values for these coordinates
+                intensities = [cube[y, x, em_idx] for x, y in zip(sampled_coords[:, 0], sampled_coords[:, 1])]
+                df[col_name] = intensities
+            else:
+                # Extract for all pixels - flatten in the same order as the coordinates
+                intensities = cube[:, :, em_idx].flatten()
+                df[col_name] = intensities
+
+        except ValueError:
+            # This emission wavelength doesn't exist for this excitation
+            # We're skipping it as requested instead of adding NaN values
+            continue
+
+    print(f"Final dataframe has {len(df.columns)} columns")
+    return df
+
+def load_data_and_create_df(pickle_file: str, sample_size: Optional[int] = None) -> pd.DataFrame:
+    """
+    Load data from pickle file and create the dataframe
+
+    Args:
+        pickle_file: Path to the pickle file
+        sample_size: Optional number of random pixels to sample
+
+    Returns:
+        Transformed dataframe
+    """
+    # Load the data
+    with open(pickle_file, 'rb') as f:
+        data_dict = pickle.load(f)
+
+    # Create the dataframe
+    return create_excitation_emission_dataframe(data_dict, sample_size)
+
+def save_dataframe(df: pd.DataFrame, output_file: str) -> None:
+    """Save the dataframe to a file"""
+    print(f"Saving dataframe to {output_file}")
+
+    # Determine file extension and save accordingly
+    ext = Path(output_file).suffix
+    if ext == '.csv':
+        df.to_csv(output_file, index=False)
+    elif ext == '.parquet':
+        df.to_parquet(output_file, index=False)
+    elif ext == '.pkl' or ext == '.pickle':
+        df.to_pickle(output_file)
+    else:
+        print(f"Unrecognized extension {ext}, saving as pickle")
+        df.to_pickle(output_file)
+
+    print(f"Saved dataframe with {len(df)} rows and {len(df.columns)} columns")
+
+def normalize_hyperspectral_data(
+    data_dict: Dict,
+    reference_type: str = 'min',
+    output_file: Optional[str] = None
+) -> Dict:
+    """
+    Normalize hyperspectral data based on exposure time.
+
+    Args:
+        data_dict: Dictionary containing hyperspectral data with exposure time in metadata
+        reference_type: Type of reference exposure time ('min', 'max', or float value)
+        output_file: Path to save the normalized data pickle file (optional)
+
+    Returns:
+        Dictionary containing normalized hyperspectral data
+    """
+    print(f"Normalizing hyperspectral data using {reference_type} exposure as reference...")
+
+    # Create a deep copy of the data to avoid modifying the original
+    normalized_data = copy.deepcopy(data_dict)
+
+    # Extract exposure times for each excitation wavelength
+    exposure_times = {}
+
+    for ex_str in data_dict['data'].keys():
+        # Try to get exposure time from different possible locations in the data structure
+        if 'raw' in data_dict['data'][ex_str] and 'expos_val' in data_dict['data'][ex_str]['raw']:
+            exposure_times[ex_str] = data_dict['data'][ex_str]['raw']['expos_val']
+        elif 'expos_val' in data_dict['data'][ex_str]:
+            exposure_times[ex_str] = data_dict['data'][ex_str]['expos_val']
+
+    if not exposure_times:
+        raise ValueError("Could not find exposure time information in the data")
+
+    print(f"Found exposure times for {len(exposure_times)} excitation wavelengths")
+
+    # Determine the reference exposure time
+    if reference_type == 'min':
+        reference_exposure = min(exposure_times.values())
+        print(f"Using minimum exposure time as reference: {reference_exposure}")
+    elif reference_type == 'max':
+        reference_exposure = max(exposure_times.values())
+        print(f"Using maximum exposure time as reference: {reference_exposure}")
+    elif isinstance(reference_type, (int, float)):
+        reference_exposure = float(reference_type)
+        print(f"Using provided exposure time as reference: {reference_exposure}")
+    else:
+        raise ValueError("Invalid reference_type. Use 'min', 'max', or a float value.")
+
+    # Store the normalization information in metadata
+    if 'metadata' not in normalized_data:
+        normalized_data['metadata'] = {}
+
+    normalized_data['metadata']['normalization'] = {
+        'reference_type': reference_type,
+        'reference_exposure': reference_exposure,
+        'original_exposures': exposure_times
+    }
+
+    # Normalize each data cube
+    print("Normalizing data cubes...")
+    for ex_str, exposure in exposure_times.items():
+        # Calculate normalization factor: E₁/E₂
+        normalization_factor = reference_exposure / exposure
+
+        # Apply normalization to the data cube
+        original_cube = data_dict['data'][ex_str]['cube']
+
+        # Normalize: I_ij^norm = I_ij × (E₁/E₂)
+        normalized_data['data'][ex_str]['cube'] = original_cube * normalization_factor
+
+        # Store normalization factor in metadata
+        normalized_data['data'][ex_str]['normalization_factor'] = normalization_factor
+
+        print(f"  Normalized excitation {ex_str}nm (Exposure: {exposure}, Factor: {normalization_factor:.4f})")
+
+    # Save the normalized data if output file is provided
+    if output_file:
+        with open(output_file, 'wb') as f:
+            pickle.dump(normalized_data, f)
+        print(f"Normalized data saved to {output_file}")
+
+    return normalized_data
+
+def print_exposure_info(data_dict: Dict) -> None:
+    """
+    Print exposure time information from the data dictionary.
+
+    Args:
+        data_dict: Dictionary containing hyperspectral data
+    """
+    print("\nExposure Time Information:")
+
+    exposure_times = {}
+
+    for ex_str in data_dict['data'].keys():
+        # Try to get exposure time from different possible locations
+        if 'raw' in data_dict['data'][ex_str] and 'expos_val' in data_dict['data'][ex_str]['raw']:
+            exposure_times[ex_str] = data_dict['data'][ex_str]['raw']['expos_val']
+        elif 'expos_val' in data_dict['data'][ex_str]:
+            exposure_times[ex_str] = data_dict['data'][ex_str]['expos_val']
+
+    if not exposure_times:
+        print("No exposure time information found in the data")
+        return
+
+    # Convert to sorted list of tuples
+    sorted_exposures = sorted([(float(ex), exp) for ex, exp in exposure_times.items()])
+
+    print(f"{'Excitation (nm)':<15} {'Exposure Time':<15}")
+    print("-" * 30)
+
+    for ex, exp in sorted_exposures:
+        print(f"{ex:<15.1f} {exp:<15}")
+
+    print("\nSummary:")
+    print(f"Minimum exposure: {min(exposure_times.values())}")
+    print(f"Maximum exposure: {max(exposure_times.values())}")
+    print(f"Ratio max/min: {max(exposure_times.values()) / min(exposure_times.values()):.2f}")
+
+def normalize_and_save_both_versions(
+    input_file: str,
+    output_dir: Optional[str] = None
+) -> Tuple[Path, Path]:
+    """
+    Load data, normalize it using both min and max exposure times, and save both versions.
+
+    Args:
+        input_file: Path to the input pickle file
+        output_dir: Directory to save the output files (default: same as input file)
+
+    Returns:
+        Tuple of (up_normalized_data, down_normalized_data)
+    """
+    # Load the data
+    print(f"Loading data from {input_file}...")
+    with open(input_file, 'rb') as f:
+        data_dict = pickle.load(f)
+
+    # Print exposure information
+    print_exposure_info(data_dict)
+
+    # Set up output directory
+    input_path = Path(input_file)
+    if output_dir is None:
+        output_dir = input_path.parent
+    else:
+        output_dir = Path(output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Create output file names
+    base_name = input_path.stem
+    up_output_file = output_dir / f"{base_name}_normalized_exposure_up.pkl"
+    down_output_file = output_dir / f"{base_name}_normalized_exposure_down.pkl"
+
+    # Normalize up (using max exposure as reference)
+    up_normalized_data = normalize_hyperspectral_data(
+        data_dict,
+        reference_type='max',
+        output_file=str(up_output_file)
+    )
+
+    # Normalize down (using min exposure as reference)
+    down_normalized_data = normalize_hyperspectral_data(
+        data_dict,
+        reference_type='min',
+        output_file=str(down_output_file)
+    )
+
+    print("\nNormalization complete!")
+    print(f"Up-normalized data (max exposure reference) saved to: {up_output_file}")
+    print(f"Down-normalized data (min exposure reference) saved to: {down_output_file}")
+
+    return up_output_file, down_output_file

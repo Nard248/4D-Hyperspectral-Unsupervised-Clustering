@@ -170,3 +170,5 @@ cython_debug/
 *.im3
 *.TRQ
 *.xlsx
+*.csv
+*.parquet
