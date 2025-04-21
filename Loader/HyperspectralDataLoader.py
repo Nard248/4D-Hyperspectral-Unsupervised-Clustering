@@ -1288,3 +1288,206 @@ def normalize_and_save_both_versions(
     print(f"Down-normalized data (min exposure reference) saved to: {down_output_file}")
 
     return up_output_file, down_output_file
+
+
+def load_masked_data_and_create_df(pickle_file: str, sample_size: Optional[int] = None) -> pd.DataFrame:
+    """
+    Load hyperspectral data from pickle file and create a dataframe,
+    excluding masked pixels (indicated by NaN values).
+
+    Args:
+        pickle_file: Path to the pickle file
+        sample_size: Optional number of random pixels to sample from non-masked pixels
+
+    Returns:
+        Transformed dataframe with masked pixels excluded
+    """
+    # Load the data
+    with open(pickle_file, 'rb') as f:
+        data_dict = pickle.load(f)
+
+    # Create the dataframe excluding masked pixels
+    return create_masked_excitation_emission_dataframe(data_dict, sample_size)
+
+
+def create_masked_excitation_emission_dataframe(data_dict: Dict,
+                                                sample_size: Optional[int] = None) -> pd.DataFrame:
+    """
+    Transform 4D hyperspectral data into a 2D dataframe, excluding masked pixels (NaN values).
+
+    Args:
+        data_dict: Dictionary containing hyperspectral data
+        sample_size: Optional number of random pixels to sample from non-masked pixels
+
+    Returns:
+        DataFrame with x, y coordinates and intensity values for non-masked pixels
+    """
+    # First, collect all valid excitation-emission combinations
+    valid_combinations = []
+    all_excitations = []
+
+    # Check what excitations we actually have in the data
+    for ex_str in data_dict['data'].keys():
+        excitation = float(ex_str)
+        all_excitations.append(excitation)
+
+        # Get the valid emission wavelengths for this excitation
+        emissions = data_dict['data'][ex_str]['wavelengths']
+
+        # Add all valid combinations to our list
+        for emission in emissions:
+            col_name = f"{int(emission)}-{int(excitation)}"
+            valid_combinations.append((excitation, emission, col_name))
+
+    print(f"Found {len(all_excitations)} excitation wavelengths")
+    print(f"Generated {len(valid_combinations)} valid excitation-emission combinations")
+
+    # Create an empty dataframe with x, y coordinates
+    # First, determine the dimensions of our data
+    first_ex = str(all_excitations[0])
+    cube_shape = data_dict['data'][first_ex]['cube'].shape
+    height, width = cube_shape[0], cube_shape[1]
+
+    print(f"Image dimensions: {height} x {width} pixels")
+
+    # Create coordinate arrays - using the same approach as in your original code
+    y_coords, x_coords = np.mgrid[0:height, 0:width]
+
+    # Flatten the coordinates
+    flat_x_coords = x_coords.flatten()
+    flat_y_coords = y_coords.flatten()
+
+    # Create a mask to identify non-NaN pixels (pixels to keep)
+    # We'll use the first wavelength of the first excitation to determine masked pixels
+    first_cube = data_dict['data'][first_ex]['cube']
+    first_band = first_cube[:, :, 0]  # Use the first band to determine mask
+    valid_mask = ~np.isnan(first_band)  # NaN values indicate masked pixels
+
+    # Check if any masking has been applied
+    if not np.any(np.isnan(first_band)):
+        print("No masked pixels detected (no NaN values found)")
+    else:
+        # Flatten the mask and filter coordinates
+        flat_mask = valid_mask.flatten()
+        flat_x_coords = flat_x_coords[flat_mask]
+        flat_y_coords = flat_y_coords[flat_mask]
+
+        print(f"Identified {np.sum(~valid_mask)} masked pixels, keeping {np.sum(valid_mask)} pixels")
+
+    # Create initial dataframe with filtered coordinates
+    df = pd.DataFrame({
+        'x': flat_x_coords,
+        'y': flat_y_coords
+    })
+
+    # If sample_size is provided, take a random sample of pixels
+    if sample_size is not None and sample_size < len(df):
+        df = df.sample(n=sample_size, random_state=42)
+        print(f"Sampled {sample_size} pixels out of {len(df.index)} non-masked pixels")
+
+    print(f"Created initial dataframe with {len(df)} rows")
+
+    # Now, fill in the intensity values for each valid combination
+    for excitation, emission, col_name in valid_combinations:
+        # Get the data cube for this excitation
+        ex_str = str(excitation)
+        cube = data_dict['data'][ex_str]['cube']
+        wavelengths = data_dict['data'][ex_str]['wavelengths']
+
+        # Find the index of this emission wavelength
+        try:
+            em_idx = wavelengths.index(emission)
+
+            # Extract the intensity values for these coordinates - vectorized approach
+            # Convert coordinates to integers and make sure they're within bounds
+            y_indices = df['y'].astype(int).values
+            x_indices = df['x'].astype(int).values
+
+            # Get the intensities for these coordinates at the specified emission wavelength
+            df[col_name] = cube[y_indices, x_indices, em_idx]
+
+        except ValueError:
+            # This emission wavelength doesn't exist for this excitation
+            # Skip it instead of adding NaN values
+            continue
+
+    print(f"Final dataframe has {len(df.columns)} columns")
+    return df
+
+
+def normalize_and_save_masked_versions(
+        input_file: str,
+        output_dir: Optional[str] = None,
+        sample_size: Optional[int] = None
+) -> Tuple[Path, Path]:
+    """
+    Load masked data, normalize it using both min and max exposure times,
+    and save both versions as parquet files, excluding masked pixels.
+
+    Args:
+        input_file: Path to the input pickle file
+        output_dir: Directory to save the output files (default: same as input file)
+        sample_size: Optional number of random pixels to sample from non-masked pixels
+
+    Returns:
+        Tuple of (up_normalized_parquet_path, down_normalized_parquet_path)
+    """
+    # Load the data
+    print(f"Loading data from {input_file}...")
+    with open(input_file, 'rb') as f:
+        data_dict = pickle.load(f)
+
+    # Print exposure information
+    print_exposure_info(data_dict)
+
+    # Set up output directory
+    input_path = Path(input_file)
+    if output_dir is None:
+        output_dir = input_path.parent
+    else:
+        output_dir = Path(output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Create output file names
+    base_name = input_path.stem
+    up_output_pickle = output_dir / f"{base_name}_normalized_exposure_up.pkl"
+    down_output_pickle = output_dir / f"{base_name}_normalized_exposure_down.pkl"
+    up_output_parquet = output_dir / f"{base_name}_normalized_exposure_up.parquet"
+    down_output_parquet = output_dir / f"{base_name}_normalized_exposure_down.parquet"
+
+    # Normalize up (using max exposure as reference)
+    up_normalized_data = normalize_hyperspectral_data(
+        data_dict,
+        reference_type='max',
+        output_file=str(up_output_pickle)
+    )
+
+    # Normalize down (using min exposure as reference)
+    down_normalized_data = normalize_hyperspectral_data(
+        data_dict,
+        reference_type='min',
+        output_file=str(down_output_pickle)
+    )
+
+    print("\nNormalization complete!")
+    print(f"Up-normalized data (max exposure reference) saved to: {up_output_pickle}")
+    print(f"Down-normalized data (min exposure reference) saved to: {down_output_pickle}")
+
+    # Create and save dataframes (excluding masked pixels)
+    print("\nCreating dataframes with masked pixels excluded...")
+
+    # Process up-normalized data
+    print("\nProcessing up-normalized data...")
+    df_up = create_masked_excitation_emission_dataframe(up_normalized_data, sample_size)
+    save_dataframe(df_up, str(up_output_parquet))
+
+    # Process down-normalized data
+    print("\nProcessing down-normalized data...")
+    df_down = create_masked_excitation_emission_dataframe(down_normalized_data, sample_size)
+    save_dataframe(df_down, str(down_output_parquet))
+
+    print(f"\nSaved filtered dataframes to:")
+    print(f"Up-normalized: {up_output_parquet}")
+    print(f"Down-normalized: {down_output_parquet}")
+
+    return up_output_parquet, down_output_parquet

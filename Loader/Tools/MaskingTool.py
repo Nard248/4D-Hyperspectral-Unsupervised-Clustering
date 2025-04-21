@@ -1,6 +1,5 @@
 import tkinter as tk
 from tkinter import filedialog, ttk, messagebox
-from PIL import Image, ImageTk
 import numpy as np
 import pickle
 import os
@@ -8,17 +7,15 @@ from pathlib import Path
 import copy
 import traceback
 import matplotlib.pyplot as plt
-from matplotlib.widgets import PolygonSelector
-from matplotlib.path import Path
+from matplotlib.path import Path as MplPath
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
-import datetime
+from matplotlib.patches import Polygon
 
 
 class HyperspectralMaskingApp:
     """
     Interactive application for creating and applying masks to hyperspectral data.
-    Incorporates polygon-based selection tools for precise masking.
     """
 
     def __init__(self, root):
@@ -36,10 +33,11 @@ class HyperspectralMaskingApp:
         self.width = None
         self.cubes = {}  # Store found data cubes
 
-        # Polygon selection variables
-        self.polygon_selector = None
-        self.polygon_vertices = []
+        # Polygon drawing variables
+        self.polygon_points = []
+        self.polygon_patch = None
         self.drawing_active = False
+        self.drawing_mode = "polygon"
 
         self.create_widgets()
 
@@ -119,18 +117,18 @@ class HyperspectralMaskingApp:
         # Mask operation buttons
         ttk.Button(self.tools_frame, text="Create Mask", command=self.start_drawing).pack(fill=tk.X, padx=5, pady=2)
 
-        # Polygon editing controls (initially hidden)
-        self.polygon_edit_frame = ttk.LabelFrame(self.control_frame, text="Polygon Editing")
+        # Polygon editing controls
+        self.edit_frame = ttk.LabelFrame(self.control_frame, text="Drawing Controls")
+        self.edit_frame.pack(fill=tk.X, padx=5, pady=5)
 
-        ttk.Button(self.polygon_edit_frame, text="Remove Last Point", command=self.remove_last_polygon_point).pack(
+        ttk.Button(self.edit_frame, text="Remove Last Point", command=self.remove_last_point).pack(
             fill=tk.X, padx=5, pady=2)
-        ttk.Button(self.polygon_edit_frame, text="Clear All Points", command=self.clear_polygon_points).pack(
+        ttk.Button(self.edit_frame, text="Clear Points", command=self.clear_points).pack(
             fill=tk.X, padx=5, pady=2)
-        ttk.Button(self.polygon_edit_frame, text="Finish Polygon", command=self.finish_polygon).pack(
+        ttk.Button(self.edit_frame, text="Finish Drawing", command=self.finish_drawing).pack(
             fill=tk.X, padx=5, pady=2)
-        ttk.Button(self.polygon_edit_frame, text="Cancel Drawing", command=self.cancel_polygon_drawing).pack(
+        ttk.Button(self.edit_frame, text="Cancel Drawing", command=self.cancel_drawing).pack(
             fill=tk.X, padx=5, pady=2)
-        # Initially hidden
 
         # Mask modification buttons
         self.mask_ops_frame = ttk.LabelFrame(self.control_frame, text="Mask Operations")
@@ -185,8 +183,9 @@ class HyperspectralMaskingApp:
         self.preview_tab = ttk.Frame(self.notebook)
         self.notebook.add(self.preview_tab, text="Preview")
 
-        # Setup matplotlib figure and canvas (shared across tabs)
-        self.figure = Figure(figsize=(8, 6), dpi=100)
+        # Setup matplotlib figure and canvas
+        self.figure = Figure(figsize=(10, 8), dpi=100)
+        self.figure.subplots_adjust(left=0.05, right=0.95, top=0.95, bottom=0.05)
         self.ax = self.figure.add_subplot(111)
 
         # Create canvases for each tab
@@ -199,16 +198,22 @@ class HyperspectralMaskingApp:
         self.preview_canvas = FigureCanvasTkAgg(self.figure, master=self.preview_tab)
         self.preview_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
-        # Connect mouse events
-        self.mask_canvas.mpl_connect('motion_notify_event', self.on_mouse_move)
-        self.mask_canvas.mpl_connect('key_press_event', self.on_key_press)
+        # Connect mouse events to each canvas
+        for canvas in [self.orig_canvas, self.mask_canvas, self.preview_canvas]:
+            canvas.mpl_connect('motion_notify_event', self.on_mouse_move)
+            canvas.mpl_connect('button_press_event', self.on_mouse_click)
+            canvas.mpl_connect('key_press_event', self.on_key_press)
 
         # Initial message
         self.ax.text(0.5, 0.5, "Load a pickle file to begin",
                      ha='center', va='center', fontsize=14,
                      transform=self.ax.transAxes)
-        self.canvas = self.mask_canvas  # Default canvas for drawing
-        self.canvas.draw()
+
+        # Update all canvases
+        self.draw_all_canvases()
+
+        # Initially hide editing controls
+        self.edit_frame.pack_forget()
 
         # Disable controls until a file is loaded
         self.toggle_controls(False)
@@ -393,8 +398,11 @@ class HyperspectralMaskingApp:
             vmin = self.min_var.get() / 100.0  # Convert to 0-1 range
             vmax = self.max_var.get() / 100.0
 
-        # Display the image
-        self.ax.imshow(self.rgb_image, vmin=vmin, vmax=vmax)
+        # Print image shape for debugging
+        print(f"RGB image shape: {self.rgb_image.shape}")
+
+        # Display the image with proper aspect ratio
+        self.ax.imshow(self.rgb_image, vmin=vmin, vmax=vmax, aspect='equal')
 
         # If mask exists, overlay it
         if self.mask is not None and np.any(self.mask):
@@ -404,7 +412,7 @@ class HyperspectralMaskingApp:
             mask_overlay[self.mask == 1, 0] = 1.0  # Red channel
             mask_overlay[self.mask == 1, 3] = 0.5  # Alpha channel
 
-            self.ax.imshow(mask_overlay, interpolation='nearest')
+            self.ax.imshow(mask_overlay, interpolation='nearest', aspect='equal')
 
             # Update status
             masked_pixels = np.sum(self.mask)
@@ -417,10 +425,17 @@ class HyperspectralMaskingApp:
         # Set title
         self.ax.set_title(f"Excitation: {excitation_key}")
 
-        # Refresh all canvases
-        self.orig_canvas.draw()
-        self.mask_canvas.draw()
-        self.preview_canvas.draw()
+        # Draw polygon points if in drawing mode
+        if self.drawing_active and self.polygon_points:
+            self.draw_polygon_preview()
+
+        # Update all canvases
+        self.draw_all_canvases()
+
+    def draw_all_canvases(self):
+        """Update all matplotlib canvases."""
+        for canvas in [self.orig_canvas, self.mask_canvas, self.preview_canvas]:
+            canvas.draw()
 
     def create_rgb_image(self, excitation_key, method='rgb', percentile=99):
         """
@@ -437,28 +452,61 @@ class HyperspectralMaskingApp:
         # Get the data cube
         cube = self.cubes[excitation_key]
 
+        # Print cube shape for debugging
+        print(f"Original cube shape: {cube.shape}")
+
+        # Check if the cube might be transposed (common issue)
+        # We expect the cube to have shape (bands, height, width) or (height, width, bands)
+        if len(cube.shape) == 3:
+            # Identify which dimension is likely the spectral dimension
+            if cube.shape[0] < cube.shape[1] and cube.shape[0] < cube.shape[2]:
+                # First dimension is smallest, likely spectral bands
+                bands_dim = 0
+                height_dim = 1
+                width_dim = 2
+                print("Cube format: (bands, height, width)")
+            elif cube.shape[2] < cube.shape[0] and cube.shape[2] < cube.shape[1]:
+                # Last dimension is smallest, likely spectral bands
+                bands_dim = 2
+                height_dim = 0
+                width_dim = 1
+                print("Cube format: (height, width, bands)")
+            else:
+                # Hard to tell, assume standard (bands, height, width)
+                bands_dim = 0
+                height_dim = 1
+                width_dim = 2
+                print("Assuming cube format: (bands, height, width)")
+        else:
+            raise ValueError(f"Unexpected cube shape: {cube.shape}. Expected 3D array.")
+
         # Replace any NaN values
         cube = np.nan_to_num(cube)
 
         # Create RGB based on method
         if method == 'rgb':
             # Use three wavelengths as RGB channels
-            num_bands = cube.shape[0]  # Assuming band dimension is first
+            num_bands = cube.shape[bands_dim]
             if num_bands >= 3:
                 indices = [int(num_bands * 0.2), int(num_bands * 0.5), int(num_bands * 0.8)]
                 r_idx, g_idx, b_idx = indices
 
-                # Get band images and transpose to proper dimensions
-                r_band = cube[r_idx]
-                g_band = cube[g_idx]
-                b_band = cube[b_idx]
+                # Extract band images based on identified dimensions
+                if bands_dim == 0:
+                    r_band = cube[r_idx, :, :]
+                    g_band = cube[g_idx, :, :]
+                    b_band = cube[b_idx, :, :]
+                else:  # bands_dim == 2
+                    r_band = cube[:, :, r_idx]
+                    g_band = cube[:, :, g_idx]
+                    b_band = cube[:, :, b_idx]
 
-                # Scale each channel
+                # Normalize to range [0, 1]
                 r_scaled = r_band / np.percentile(r_band, percentile)
                 g_scaled = g_band / np.percentile(g_band, percentile)
                 b_scaled = b_band / np.percentile(b_band, percentile)
 
-                # Clip to [0, 1]
+                # Clip to [0, 1] range
                 r_scaled = np.clip(r_scaled, 0, 1)
                 g_scaled = np.clip(g_scaled, 0, 1)
                 b_scaled = np.clip(b_scaled, 0, 1)
@@ -472,10 +520,17 @@ class HyperspectralMaskingApp:
                 method = 'max'
 
         if method in ['max', 'mean']:
-            if method == 'max':
-                proj = np.max(cube, axis=0)
-            else:  # mean
-                proj = np.mean(cube, axis=0)
+            # Generate a projection based on the identified dimensions
+            if bands_dim == 0:
+                if method == 'max':
+                    proj = np.max(cube, axis=0)
+                else:  # mean
+                    proj = np.mean(cube, axis=0)
+            else:  # bands_dim == 2
+                if method == 'max':
+                    proj = np.max(cube, axis=2)
+                else:  # mean
+                    proj = np.mean(cube, axis=2)
 
             # Scale and clip
             max_val = np.percentile(proj[~np.isnan(proj)], percentile)  # Exclude NaNs for percentile
@@ -485,10 +540,11 @@ class HyperspectralMaskingApp:
             # Replace NaNs with zeros
             scaled = np.nan_to_num(scaled)
 
-            # Convert to RGB
+            # Convert to RGB by duplicating the channel
             rgb = np.stack([scaled, scaled, scaled], axis=2)
             print(f"Created RGB image using {method} projection")
 
+        print(f"Final RGB image shape: {rgb.shape}")
         return rgb
 
     def on_mouse_move(self, event):
@@ -498,7 +554,7 @@ class HyperspectralMaskingApp:
             self.value_label.config(text="")
             return
 
-        x, y = int(event.xdata), int(event.ydata)
+        x, y = int(event.xdata) if event.xdata is not None else -1, int(event.ydata) if event.ydata is not None else -1
 
         # Check bounds
         if 0 <= y < self.height and 0 <= x < self.width:
@@ -510,17 +566,70 @@ class HyperspectralMaskingApp:
                 mask_state = "Masked" if self.mask[y, x] == 1 else "Unmasked"
                 self.value_label.config(text=f"Status: {mask_state}")
 
-    def on_key_press(self, event):
-        """Handle keyboard shortcuts during polygon editing."""
-        if not self.drawing_active or self.drawing_mode_var.get() != "polygon":
+    def on_mouse_click(self, event):
+        """Handle mouse click events for drawing."""
+        if not self.drawing_active or event.inaxes != self.ax:
             return
 
-        if event.key == 'backspace' or event.key == 'delete':
-            self.remove_last_polygon_point()
+        print(f"Mouse click detected at: {event.xdata}, {event.ydata}")
+
+        # Get click coordinates
+        x, y = event.xdata, event.ydata
+
+        if x is None or y is None:
+            return
+
+        # Append to polygon points
+        self.polygon_points.append((x, y))
+
+        # Update status
+        point_count = len(self.polygon_points)
+        self.status_label.config(text=f"Drawing: {point_count} points", foreground="blue")
+
+        # Draw the updated polygon preview
+        self.draw_polygon_preview()
+
+        # If we're in rectangle mode and have 2 points, automatically finish
+        if self.drawing_mode_var.get() == "rectangle" and len(self.polygon_points) == 2:
+            self.finish_drawing()
+
+    def draw_polygon_preview(self):
+        """Draw the current polygon as a preview."""
+        # Remove previous polygon patch if it exists
+        if self.polygon_patch in self.ax.patches:
+            self.polygon_patch.remove()
+            self.polygon_patch = None
+
+        if len(self.polygon_points) < 2:
+            # Just draw points if we have fewer than 2 vertices
+            self.ax.plot([p[0] for p in self.polygon_points],
+                         [p[1] for p in self.polygon_points],
+                         'ro-', linewidth=2, markersize=8)
+        else:
+            # Draw polygon
+            self.polygon_patch = Polygon(self.polygon_points, fill=False,
+                                         edgecolor='red', linewidth=2, alpha=0.8)
+            self.ax.add_patch(self.polygon_patch)
+
+            # Add markers for each point
+            self.ax.plot([p[0] for p in self.polygon_points],
+                         [p[1] for p in self.polygon_points],
+                         'ro', markersize=8)
+
+        # Update canvases
+        self.draw_all_canvases()
+
+    def on_key_press(self, event):
+        """Handle keyboard shortcuts during polygon editing."""
+        if not self.drawing_active:
+            return
+
+        if event.key == 'backspace':
+            self.remove_last_point()
         elif event.key == 'escape':
-            self.cancel_polygon_drawing()
-        elif event.key == 'enter' or event.key == 'return':
-            self.finish_polygon()
+            self.cancel_drawing()
+        elif event.key == 'enter':
+            self.finish_drawing()
 
     def start_drawing(self):
         """Start drawing a new mask."""
@@ -531,320 +640,353 @@ class HyperspectralMaskingApp:
         # Switch to the mask editing tab
         self.notebook.select(self.mask_tab)
 
-        drawing_mode = self.drawing_mode_var.get()
+        # Get drawing mode
+        self.drawing_mode = self.drawing_mode_var.get()
+
+        # Reset polygon points
+        self.polygon_points = []
+        self.polygon_patch = None
+
+        # Activate drawing mode
         self.drawing_active = True
 
-        if drawing_mode == "polygon":
-            # Show polygon editing controls
-            self.polygon_edit_frame.pack(fill=tk.X, padx=5, pady=5, after=self.tools_frame)
+        # Show editing controls
+        self.edit_frame.pack(after=self.tools_frame, fill=tk.X, padx=5, pady=5)
 
-            # Create polygon selector
-            if self.polygon_selector is not None:
-                self.polygon_selector.disconnect_events()
+        # Force canvas to grab focus
+        self.mask_canvas.get_tk_widget().focus_force()
 
-            self.polygon_vertices = []
-            self.polygon_selector = PolygonSelector(
-                self.ax,
-                self.on_polygon_selected,
-                useblit=True,
-                props=dict(color='red', linestyle='-', linewidth=2, alpha=0.8)
-            )
+        # Update status
+        self.status_label.config(text=f"Drawing {self.drawing_mode}: 0 points", foreground="blue")
 
-            # Show instructions
-            self.status_label.config(text="Drawing polygon: 0 points", foreground="blue")
+        # Rectangle mode instructions
+        if self.drawing_mode == "rectangle":
+            messagebox.showinfo("Rectangle Selection",
+                                "Click two points to define the rectangle:\n"
+                                "- First click: top-left corner\n"
+                                "- Second click: bottom-right corner\n\n"
+                                "The rectangle will be created automatically after the second point.")
+        else:
+            # Polygon mode instructions
             messagebox.showinfo("Polygon Selection",
                                 "Click to add polygon vertices.\n"
-                                "When finished, click 'Finish Polygon' or press Enter.\n\n"
+                                "When finished, click 'Finish Drawing' or press Enter.\n\n"
                                 "Keyboard shortcuts:\n"
                                 "Enter: Finish polygon\n"
-                                "Backspace/Delete: Remove last point\n"
+                                "Backspace: Remove last point\n"
                                 "Escape: Cancel drawing")
 
+    def remove_last_point(self):
+        """Remove the last point from the polygon."""
+        if not self.drawing_active or not self.polygon_points:
+            return
+
+        # Remove last point
+        self.polygon_points.pop()
+
+        # Update status
+        point_count = len(self.polygon_points)
+        self.status_label.config(text=f"Drawing: {point_count} points", foreground="blue")
+
+        # Redraw
+        self.update_visualization()
+
+    def clear_points(self):
+        """Clear all polygon points."""
+        if not self.drawing_active:
+            return
+
+        # Clear points
+        self.polygon_points = []
+
+        # Update status
+        self.status_label.config(text="Drawing: 0 points", foreground="blue")
+
+        # Redraw
+        self.update_visualization()
+
+    def finish_drawing(self):
+        """Finalize the drawing and create a mask."""
+        if not self.drawing_active:
+            return
+
+        drawing_mode = self.drawing_mode
+
+        if drawing_mode == "polygon":
+            if len(self.polygon_points) < 3:
+                messagebox.showwarning("Warning", "Need at least 3 points to create a polygon mask")
+                return
+
+            # Create mask from polygon
+            self.create_mask_from_polygon()
+
         elif drawing_mode == "rectangle":
-            # Open rectangle selection dialog
-            self.draw_rectangle_dialog()
+            if len(self.polygon_points) < 2:
+                messagebox.showwarning("Warning", "Need 2 points to define a rectangle")
+                return
 
-    def on_polygon_selected(self, vertices):
-        """Handle polygon selection."""
-        self.polygon_vertices = vertices
+            # Create mask from rectangle
+            self.create_mask_from_rectangle()
 
-        # Display current vertices count
-        num_vertices = len(vertices)
-        self.status_label.config(text=f"Drawing polygon: {num_vertices} points", foreground="blue")
+        # Hide editing controls
+        self.edit_frame.pack_forget()
 
-    def remove_last_polygon_point(self):
-        """Remove the last point added to the polygon."""
-        if not self.drawing_active or self.drawing_mode_var.get() != "polygon":
-            return
+        # End drawing mode
+        self.drawing_active = False
 
-        if self.polygon_selector is not None and hasattr(self.polygon_selector, 'verts') and len(
-                self.polygon_selector.verts) > 0:
-            # Remove last point from the selector
-            self.polygon_selector.verts.pop()
+        # Clear polygon preview
+        self.polygon_points = []
+        if self.polygon_patch in self.ax.patches:
+            self.polygon_patch.remove()
+            self.polygon_patch = None
 
-            # Force redraw
-            self.polygon_selector._update_verts()
-            self.mask_canvas.draw_idle()
+        # Update visualization
+        self.update_visualization()
 
-            # Also update our cached vertices
-            if self.polygon_vertices and len(self.polygon_vertices) > 0:
-                self.polygon_vertices = self.polygon_vertices[:-1]
-
-            # Update status
-            num_vertices = len(self.polygon_selector.verts)
-            self.status_label.config(text=f"Drawing polygon: {num_vertices} points", foreground="blue")
-
-    def clear_polygon_points(self):
-        """Clear all points in the current polygon."""
-        if not self.drawing_active or self.drawing_mode_var.get() != "polygon":
-            return
-
-        if self.polygon_selector is not None:
-            # Clear all vertices
-            self.polygon_selector.verts = []
-
-            # Force redraw
-            self.polygon_selector._update_verts()
-            self.mask_canvas.draw_idle()
-
-            # Also clear our cached vertices
-            self.polygon_vertices = []
-
-            # Update status
-            self.status_label.config(text="Drawing polygon: 0 points", foreground="blue")
-
-    def finish_polygon(self):
-        """Finalize polygon and create mask."""
-        if not self.drawing_active or self.drawing_mode_var.get() != "polygon":
-            return
-
-        if not self.polygon_vertices or len(self.polygon_vertices) < 3:
-            messagebox.showwarning("Warning", "Need at least 3 points to create a polygon mask")
+    def create_mask_from_polygon(self):
+        """Create a mask from the current polygon points."""
+        if not self.polygon_points or len(self.polygon_points) < 3:
             return
 
         # Convert vertices to numpy array
-        vertices = np.array(self.polygon_vertices)
+        vertices = np.array(self.polygon_points)
 
         # Create a grid of pixel coordinates
         y, x = np.mgrid[:self.height, :self.width]
         points = np.vstack((x.flatten(), y.flatten())).T
 
         # Create mask from polygon
-        path = Path(vertices)
+        path = MplPath(vertices)
         mask = path.contains_points(points)
         mask = mask.reshape(self.height, self.width)
 
         # Set this as the mask (replacing any existing mask)
         self.mask = mask.astype(np.uint8)
 
-        # Clean up polygon selector
-        if self.polygon_selector is not None:
-            self.polygon_selector.disconnect_events()
-            self.polygon_selector = None
-
-        # Hide polygon editing controls
-        self.polygon_edit_frame.pack_forget()
-
-        # End drawing mode
-        self.drawing_active = False
-
-        # Update display
-        self.update_visualization()
-
         # Show confirmation
         self.status_label.config(text=f"Mask created with {len(vertices)} vertices", foreground="green")
 
-    def cancel_polygon_drawing(self):
-        """Cancel the current polygon drawing operation."""
-        if not self.drawing_active or self.drawing_mode_var.get() != "polygon":
+    def create_mask_from_rectangle(self):
+        """Create a mask from the current rectangle points."""
+        if len(self.polygon_points) < 2:
             return
 
-        # Clear the polygon
-        self.clear_polygon_points()
+        # Extract rectangle corners
+        x1, y1 = self.polygon_points[0]
+        x2, y2 = self.polygon_points[1]
 
-        # Disconnect the selector
-        if self.polygon_selector is not None:
-            self.polygon_selector.disconnect_events()
-            self.polygon_selector = None
+        # Convert to integers and ensure proper bounds
+        x1, x2 = int(min(x1, x2)), int(max(x1, x2))
+        y1, y2 = int(min(y1, y2)), int(max(y1, y2))
 
-        # Hide polygon editing controls
-        self.polygon_edit_frame.pack_forget()
+        # Clamp to image boundaries
+        x1 = max(0, min(x1, self.width - 1))
+        x2 = max(0, min(x2, self.width - 1))
+        y1 = max(0, min(y1, self.height - 1))
+        y2 = max(0, min(y2, self.height - 1))
+
+        # Create rectangle mask
+        self.mask = np.zeros((self.height, self.width), dtype=np.uint8)
+        self.mask[y1:y2 + 1, x1:x2 + 1] = 1
+
+        # Show confirmation
+        width, height = x2 - x1 + 1, y2 - y1 + 1
+        self.status_label.config(text=f"Rectangle mask created ({width}x{height})", foreground="green")
+
+    def cancel_drawing(self):
+        """Cancel the current drawing operation."""
+        if not self.drawing_active:
+            return
+
+        # Hide editing controls
+        self.edit_frame.pack_forget()
 
         # End drawing mode
         self.drawing_active = False
 
-        # Reset vertices
-        self.polygon_vertices = []
+        # Clear polygon preview
+        self.polygon_points = []
+        if self.polygon_patch in self.ax.patches:
+            self.polygon_patch.remove()
+            self.polygon_patch = None
 
-        # Update display
+        # Update visualization
         self.update_visualization()
 
         # Show message
-        self.status_label.config(text="Polygon drawing cancelled", foreground="red")
-
-    def draw_rectangle_dialog(self):
-        """Open dialog for rectangle selection."""
-        rect_dialog = tk.Toplevel(self.root)
-        rect_dialog.title("Rectangle Selection")
-        rect_dialog.geometry("300x200")
-
-        # Create a frame for the content
-        frame = ttk.Frame(rect_dialog, padding=10)
-        frame.pack(fill=tk.BOTH, expand=True)
-
-        ttk.Label(frame, text="Enter rectangle coordinates:").pack(pady=5)
-
-        # X start
-        x_start_frame = ttk.Frame(frame)
-        x_start_frame.pack(fill=tk.X, pady=2)
-        ttk.Label(x_start_frame, text="X start:").pack(side=tk.LEFT)
-        x_start_var = tk.IntVar(value=0)
-        ttk.Entry(x_start_frame, textvariable=x_start_var).pack(side=tk.LEFT, fill=tk.X, expand=True)
-
-        # Y start
-        y_start_frame = ttk.Frame(frame)
-        y_start_frame.pack(fill=tk.X, pady=2)
-        ttk.Label(y_start_frame, text="Y start:").pack(side=tk.LEFT)
-        y_start_var = tk.IntVar(value=0)
-        ttk.Entry(y_start_frame, textvariable=y_start_var).pack(side=tk.LEFT, fill=tk.X, expand=True)
-
-        # X end
-        x_end_frame = ttk.Frame(frame)
-        x_end_frame.pack(fill=tk.X, pady=2)
-        ttk.Label(x_end_frame, text="X end:").pack(side=tk.LEFT)
-        x_end_var = tk.IntVar(value=self.width - 1 if self.width else 0)
-        ttk.Entry(x_end_frame, textvariable=x_end_var).pack(side=tk.LEFT, fill=tk.X, expand=True)
-
-        # Y end
-        y_end_frame = ttk.Frame(frame)
-        y_end_frame.pack(fill=tk.X, pady=2)
-        ttk.Label(y_end_frame, text="Y end:").pack(side=tk.LEFT)
-        y_end_var = tk.IntVar(value=self.height - 1 if self.height else 0)
-        ttk.Entry(y_end_frame, textvariable=y_end_var).pack(side=tk.LEFT, fill=tk.X, expand=True)
-
-        # Function to create rectangle mask
-        def create_rect_mask():
-            x_start = max(0, min(x_start_var.get(), self.width - 1))
-            y_start = max(0, min(y_start_var.get(), self.height - 1))
-            x_end = max(0, min(x_end_var.get(), self.width - 1))
-            y_end = max(0, min(y_end_var.get(), self.height - 1))
-
-            # Ensure start < end
-            x_start, x_end = min(x_start, x_end), max(x_start, x_end)
-            y_start, y_end = min(y_start, y_end), max(y_start, y_end)
-
-            # Create rectangle mask
-            self.mask = np.zeros((self.height, self.width), dtype=np.uint8)
-            self.mask[y_start:y_end + 1, x_start:x_end + 1] = 1
-
-            # End drawing mode
-            self.drawing_active = False
-
-            # Update display
-            self.update_visualization()
-            rect_dialog.destroy()
-
-            # Show confirmation
-            self.status_label.config(text=f"Rectangle mask created ({x_end - x_start + 1}x{y_end - y_start + 1})",
-                                     foreground="green")
-
-        # Buttons
-        buttons_frame = ttk.Frame(frame)
-        buttons_frame.pack(fill=tk.X, pady=10)
-        ttk.Button(buttons_frame, text="Cancel", command=rect_dialog.destroy).pack(side=tk.LEFT, padx=5)
-        ttk.Button(buttons_frame, text="Create", command=create_rect_mask).pack(side=tk.RIGHT, padx=5)
+        self.status_label.config(text="Drawing cancelled", foreground="red")
 
     def add_to_mask(self):
         """Add the current selection to existing mask."""
-        if not self.drawing_active:
-            messagebox.showinfo("Info", "Start drawing first!")
+        if not self.mask.any():
+            messagebox.showinfo("Info", "No mask exists. Create a mask first.")
             return
 
-        drawing_mode = self.drawing_mode_var.get()
+        # Start a new drawing
+        self.start_drawing()
 
-        if drawing_mode == "polygon" and self.polygon_vertices:
-            if len(self.polygon_vertices) < 3:
-                messagebox.showwarning("Warning", "Need at least 3 points to create a polygon mask")
+        # Change button behavior to add to mask when finished
+        self.edit_frame.children["!button3"].config(
+            text="Add to Mask",
+            command=lambda: self.finish_add_to_mask()
+        )
+
+    def finish_add_to_mask(self):
+        """Finish adding to the mask."""
+        if not self.drawing_active:
+            return
+
+        # Create a temporary mask
+        temp_mask = np.zeros((self.height, self.width), dtype=np.uint8)
+
+        # Fill the temporary mask
+        if self.drawing_mode == "polygon":
+            if len(self.polygon_points) < 3:
+                messagebox.showwarning("Warning", "Need at least 3 points to create a polygon")
                 return
 
-            # Convert vertices to numpy array
-            vertices = np.array(self.polygon_vertices)
-
-            # Create a grid of pixel coordinates
+            # Create polygon mask
+            vertices = np.array(self.polygon_points)
             y, x = np.mgrid[:self.height, :self.width]
             points = np.vstack((x.flatten(), y.flatten())).T
+            path = MplPath(vertices)
+            mask = path.contains_points(points)
+            temp_mask = mask.reshape(self.height, self.width).astype(np.uint8)
 
-            # Create mask from polygon
-            path = Path(vertices)
-            new_mask = path.contains_points(points)
-            new_mask = new_mask.reshape(self.height, self.width)
+        elif self.drawing_mode == "rectangle":
+            if len(self.polygon_points) < 2:
+                messagebox.showwarning("Warning", "Need 2 points to define a rectangle")
+                return
 
-            # Add to existing mask (logical OR)
-            self.mask = np.logical_or(self.mask, new_mask).astype(np.uint8)
+            # Create rectangle mask
+            x1, y1 = self.polygon_points[0]
+            x2, y2 = self.polygon_points[1]
 
-            # Clean up polygon selection
-            self.polygon_vertices = []
-            if self.polygon_selector is not None:
-                self.polygon_selector.disconnect_events()
-                self.polygon_selector = None
+            # Convert to integers and ensure proper bounds
+            x1, x2 = int(min(x1, x2)), int(max(x1, x2))
+            y1, y2 = int(min(y1, y2)), int(max(y1, y2))
 
-            # Hide polygon editing controls
-            self.polygon_edit_frame.pack_forget()
+            # Clamp to image boundaries
+            x1 = max(0, min(x1, self.width - 1))
+            x2 = max(0, min(x2, self.width - 1))
+            y1 = max(0, min(y1, self.height - 1))
+            y2 = max(0, min(y2, self.height - 1))
 
-            # End drawing mode
-            self.drawing_active = False
+            temp_mask[y1:y2 + 1, x1:x2 + 1] = 1
 
-            # Update display
-            self.update_visualization()
+        # Add to existing mask (logical OR)
+        added_pixels = np.logical_and(temp_mask, ~self.mask).sum()
+        self.mask = np.logical_or(self.mask, temp_mask).astype(np.uint8)
 
-            # Show confirmation
-            self.status_label.config(text="Region added to mask", foreground="green")
+        # Hide editing controls
+        self.edit_frame.pack_forget()
+
+        # End drawing mode
+        self.drawing_active = False
+
+        # Clear polygon preview
+        self.polygon_points = []
+        if self.polygon_patch in self.ax.patches:
+            self.polygon_patch.remove()
+            self.polygon_patch = None
+
+        # Update visualization
+        self.update_visualization()
+
+        # Reset button text and command
+        self.edit_frame.children["!button3"].config(
+            text="Finish Drawing",
+            command=self.finish_drawing
+        )
+
+        # Show confirmation
+        self.status_label.config(text=f"Added {added_pixels} pixels to mask", foreground="green")
 
     def subtract_from_mask(self):
         """Subtract the current selection from existing mask."""
-        if not self.drawing_active:
-            messagebox.showinfo("Info", "Start drawing first!")
+        if not self.mask.any():
+            messagebox.showinfo("Info", "No mask exists. Create a mask first.")
             return
 
-        drawing_mode = self.drawing_mode_var.get()
+        # Start a new drawing
+        self.start_drawing()
 
-        if drawing_mode == "polygon" and self.polygon_vertices:
-            if len(self.polygon_vertices) < 3:
-                messagebox.showwarning("Warning", "Need at least 3 points to create a polygon mask")
+        # Change button behavior to subtract from mask when finished
+        self.edit_frame.children["!button3"].config(
+            text="Subtract from Mask",
+            command=lambda: self.finish_subtract_from_mask()
+        )
+
+    def finish_subtract_from_mask(self):
+        """Finish subtracting from the mask."""
+        if not self.drawing_active:
+            return
+
+        # Create a temporary mask
+        temp_mask = np.zeros((self.height, self.width), dtype=np.uint8)
+
+        # Fill the temporary mask
+        if self.drawing_mode == "polygon":
+            if len(self.polygon_points) < 3:
+                messagebox.showwarning("Warning", "Need at least 3 points to create a polygon")
                 return
 
-            # Convert vertices to numpy array
-            vertices = np.array(self.polygon_vertices)
-
-            # Create a grid of pixel coordinates
+            # Create polygon mask
+            vertices = np.array(self.polygon_points)
             y, x = np.mgrid[:self.height, :self.width]
             points = np.vstack((x.flatten(), y.flatten())).T
+            path = MplPath(vertices)
+            mask = path.contains_points(points)
+            temp_mask = mask.reshape(self.height, self.width).astype(np.uint8)
 
-            # Create mask from polygon
-            path = Path(vertices)
-            subtract_mask = path.contains_points(points)
-            subtract_mask = subtract_mask.reshape(self.height, self.width)
+        elif self.drawing_mode == "rectangle":
+            if len(self.polygon_points) < 2:
+                messagebox.showwarning("Warning", "Need 2 points to define a rectangle")
+                return
 
-            # Subtract from existing mask (logical AND with NOT)
-            self.mask = np.logical_and(self.mask, ~subtract_mask).astype(np.uint8)
+            # Create rectangle mask
+            x1, y1 = self.polygon_points[0]
+            x2, y2 = self.polygon_points[1]
 
-            # Clean up polygon selection
-            self.polygon_vertices = []
-            if self.polygon_selector is not None:
-                self.polygon_selector.disconnect_events()
-                self.polygon_selector = None
+            # Convert to integers and ensure proper bounds
+            x1, x2 = int(min(x1, x2)), int(max(x1, x2))
+            y1, y2 = int(min(y1, y2)), int(max(y1, y2))
 
-            # Hide polygon editing controls
-            self.polygon_edit_frame.pack_forget()
+            # Clamp to image boundaries
+            x1 = max(0, min(x1, self.width - 1))
+            x2 = max(0, min(x2, self.width - 1))
+            y1 = max(0, min(y1, self.height - 1))
+            y2 = max(0, min(y2, self.height - 1))
 
-            # End drawing mode
-            self.drawing_active = False
+            temp_mask[y1:y2 + 1, x1:x2 + 1] = 1
 
-            # Update display
-            self.update_visualization()
+        # Subtract from existing mask (logical AND with NOT)
+        removed_pixels = np.logical_and(temp_mask, self.mask).sum()
+        self.mask = np.logical_and(self.mask, ~temp_mask).astype(np.uint8)
 
-            # Show confirmation
-            self.status_label.config(text="Region subtracted from mask", foreground="green")
+        # Hide editing controls
+        self.edit_frame.pack_forget()
+
+        # End drawing mode
+        self.drawing_active = False
+
+        # Clear polygon preview
+        self.polygon_points = []
+        if self.polygon_patch in self.ax.patches:
+            self.polygon_patch.remove()
+            self.polygon_patch = None
+
+        # Update visualization
+        self.update_visualization()
+
+        # Reset button text and command
+        self.edit_frame.children["!button3"].config(
+            text="Finish Drawing",
+            command=self.finish_drawing
+        )
+
+        # Show confirmation
+        self.status_label.config(text=f"Removed {removed_pixels} pixels from mask", foreground="green")
 
     def clear_mask(self):
         """Clear the current mask."""
