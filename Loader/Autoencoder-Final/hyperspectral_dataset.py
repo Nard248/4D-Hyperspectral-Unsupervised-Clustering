@@ -18,12 +18,14 @@ class HyperspectralDataset(Dataset):
     """
     Dataset for loading hyperspectral data for the autoencoder.
     Handles variable emission band lengths across different excitation wavelengths,
-    replaces NaN values, and applies global normalization.
+    replaces NaN values, and applies improved normalization options.
     """
 
     def __init__(self, data_dict: Dict,
                  excitation_wavelengths: List[float] = None,
                  normalize: bool = True,
+                 normalization_method: str = 'global_percentile',  # 'global_minmax', 'global_percentile', 'per_excitation'
+                 percentile_range: Tuple[float, float] = (1.0, 99.0),  # For percentile normalization
                  downscale_factor: int = 1,
                  roi: Optional[Tuple[int, int, int, int]] = None):
         """
@@ -32,18 +34,23 @@ class HyperspectralDataset(Dataset):
         Args:
             data_dict: Dictionary containing hyperspectral data (output from HyperspectralDataLoader)
             excitation_wavelengths: List of excitation wavelengths to use
-            normalize: Whether to normalize the data globally to [0,1]
+            normalize: Whether to normalize the data
+            normalization_method: Method for normalization ('global_minmax', 'global_percentile', 'per_excitation')
+            percentile_range: Percentile range for normalization if using 'global_percentile' method
             downscale_factor: Factor to downscale the spatial dimensions (1 = full resolution)
             roi: Region of interest as (row_min, row_max, col_min, col_max)
         """
         self.data_dict = data_dict
         self.normalize = normalize
+        self.normalization_method = normalization_method
+        self.percentile_range = percentile_range
         self.downscale_factor = downscale_factor
         self.roi = roi
 
         # Initialize emission_wavelengths dictionary
-        self.emission_wavelengths = {}  # This was missing!
-        self.processed_data = {}  # Initialize this too for clarity
+        self.emission_wavelengths = {}
+        self.processed_data = {}
+        self.normalization_params = {}
 
         # If no excitation wavelengths are specified, use all available
         if excitation_wavelengths is None:

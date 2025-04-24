@@ -76,7 +76,7 @@ class HyperspectralViewer:
         self.ex_frame.pack(fill=tk.X, padx=5, pady=5)
         ttk.Label(self.ex_frame, text="Excitation (nm):").pack(side=tk.LEFT, padx=5)
         self.ex_var = tk.StringVar()
-        self.ex_combo = ttk.Combobox(self.ex_frame, textvariable=self.ex_var, state="readonly", width=10)
+        self.ex_combo = ttk.Combobox(self.ex_frame, textvariable=self.ex_var, state="readonly", width=30)
         self.ex_combo.pack(side=tk.LEFT, padx=5)
         self.ex_combo.bind("<<ComboboxSelected>>", self.on_excitation_changed)
 
