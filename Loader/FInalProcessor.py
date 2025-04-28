@@ -656,15 +656,15 @@ class HyperspectralProcessor:
 # Example usage
 if __name__ == "__main__":
     processor = HyperspectralProcessor(
-        data_path="../Data/Kiwi",
-        metadata_path="../Data/Kiwi/metadata.xlsx",
-        laser_power_excel="../Data/Kiwi/TLS Scans/wavelength_power_data.xlsx",
+        data_path="../Data/Lime",
+        metadata_path="../Data/Lime/metadata.xlsx",
+        laser_power_excel="../Data/Lime/TLS Scans/average_power.xlsx",
         cutoff_offset=30,
         verbose=True
     )
 
     output_files = processor.process_full_pipeline(
-        output_dir="Data/Kiwi Experiment/processed",
+        output_dir="Data/Lime Experiment/processed",
         exposure_reference="max",
         power_reference="min",
         create_parquet=True
