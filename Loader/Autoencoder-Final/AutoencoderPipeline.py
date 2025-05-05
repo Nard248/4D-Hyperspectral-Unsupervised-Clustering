@@ -9,7 +9,6 @@ including masked autoencoder training and efficient clustering with the followin
 3. Optimized clustering for pixel-wise segmentation
 4. Visualization utilities for model outputs and clustering results
 
-Author: Claude AI
 """
 
 import os
@@ -727,7 +726,7 @@ class HyperspectralCAEWithMasking(nn.Module):
 # 3. MEMORY-EFFICIENT TRAINING WITH MASKING
 # =============================================================================
 
-def create_spatial_chunks(data_tensor, mask=None, chunk_size=128, overlap=16):
+def create_spatial_chunks(data_tensor, mask=None, chunk_size=128, overlap=16, chunk_overlap=None):
     """
     Split a large spatial hyperspectral tensor into overlapping chunks.
 
@@ -746,6 +745,8 @@ def create_spatial_chunks(data_tensor, mask=None, chunk_size=128, overlap=16):
     else:  # [height, width, emission_bands]
         height, width = data_tensor.shape[0], data_tensor.shape[1]
 
+    if chunk_overlap is not None:
+        overlap = chunk_overlap
     # Calculate stride
     stride = chunk_size - overlap
 
@@ -940,11 +941,13 @@ def train_with_masking(
         data_np = all_data[ex].numpy()
 
         # Generate chunks for this excitation
-        chunks, positions = create_spatial_chunks(
+        chunks_result = create_spatial_chunks(
             data_np,
             chunk_size=chunk_size,
             overlap=chunk_overlap
         )
+        chunks = chunks_result[0]
+        positions = chunks_result[1]
 
         chunks_dict[ex] = chunks
         positions_dict[ex] = positions
@@ -1146,8 +1149,9 @@ def evaluate_model_with_masking(
             valid_mask = all_valid_masks[ex] if ex in all_valid_masks else None
 
             # Create chunks for this excitation
-            chunks, positions = create_spatial_chunks(data.numpy(), chunk_size=chunk_size, chunk_overlap=chunk_overlap)
-
+            chunks_result = create_spatial_chunks(data.numpy(), chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+            chunks = chunks_result[0]
+            positions = chunks_result[1]
             # Process chunks
             reconstructed_chunks = []
             for i, chunk in enumerate(chunks):
@@ -1185,14 +1189,52 @@ def evaluate_model_with_masking(
             results['reconstructions'][ex] = full_reconstruction
 
             # Apply masks for metric calculation
+            # Find this section in the function:
             if valid_mask is not None:
-                # Expand valid mask to match dimensions
-                valid_mask_expanded = valid_mask.unsqueeze(-1).expand_as(data)
+                # Check dimensions of valid_mask
+                if len(valid_mask.shape) == len(data.shape):
+                    # Valid mask already has same dimension structure as data
+                    valid_mask_expanded = valid_mask
+                elif len(valid_mask.shape) == len(data.shape) - 1:
+                    # Need to add one dimension to match data
+                    valid_mask_expanded = valid_mask.unsqueeze(-1).expand_as(data)
+                else:
+                    # Handle other cases - reshape as needed
+                    print(f"Warning: Valid mask shape {valid_mask.shape} doesn't match data shape {data.shape}")
+                    # Try to reshape in a best-effort manner
+                    if len(valid_mask.shape) == 2:  # Spatial mask [height, width]
+                        valid_mask_expanded = valid_mask.unsqueeze(-1).expand(valid_mask.shape[0],
+                                                                              valid_mask.shape[1],
+                                                                              data.shape[2])
+                    else:
+                        # Last resort - just use data shape
+                        valid_mask_expanded = torch.ones_like(data, device=device)
+
+                # Move valid_mask_expanded to the specified device - ADD THIS LINE
+                valid_mask_expanded = valid_mask_expanded.to(device)
 
                 # Apply spatial mask if available
                 if spatial_mask is not None:
                     spatial_mask_tensor = torch.tensor(spatial_mask, dtype=torch.float32, device=device)
-                    spatial_mask_expanded = spatial_mask_tensor.unsqueeze(-1).expand_as(data)
+
+                    # Similar dimension checking for spatial mask
+                    if len(spatial_mask_tensor.shape) == len(data.shape):
+                        spatial_mask_expanded = spatial_mask_tensor
+                    elif len(spatial_mask_tensor.shape) == len(data.shape) - 1:
+                        spatial_mask_expanded = spatial_mask_tensor.unsqueeze(-1).expand_as(data)
+                    else:
+                        # Handle other cases
+                        if len(spatial_mask_tensor.shape) == 2:  # Spatial mask [height, width]
+                            spatial_mask_expanded = spatial_mask_tensor.unsqueeze(-1).expand(
+                                spatial_mask_tensor.shape[0],
+                                spatial_mask_tensor.shape[1],
+                                data.shape[2])
+                        else:
+                            spatial_mask_expanded = torch.ones_like(data, device=device)
+
+                    # Move spatial_mask_expanded to the specified device - ADD THIS LINE IF NEEDED
+                    spatial_mask_expanded = spatial_mask_expanded.to(device)
+
                     combined_mask = valid_mask_expanded * spatial_mask_expanded
                 else:
                     combined_mask = valid_mask_expanded
@@ -1302,17 +1344,6 @@ def extract_encoded_features(
 ):
     """
     Extract encoded features efficiently using chunking.
-
-    Args:
-        model: Trained HyperspectralCAEWithMasking model
-        data_dict: Dictionary mapping excitation wavelengths to data tensors
-        mask: Optional binary mask (1=valid, 0=masked)
-        chunk_size: Size of spatial chunks for processing
-        chunk_overlap: Overlap between adjacent chunks
-        device: Device to use for computation
-
-    Returns:
-        Dictionary mapping excitation wavelengths to encoded features and spatial shapes
     """
     # Ensure model is in eval mode
     model.eval()
@@ -1331,13 +1362,18 @@ def extract_encoded_features(
         for ex, data in data_dict.items():
             print(f"Extracting features for excitation {ex}...")
 
-            # Create chunks for this excitation
-            chunks, positions = create_spatial_chunks(
+            # Create chunks for this excitation - USE MORE ROBUST APPROACH HERE
+            # Instead of unpacking directly, get the full result and extract what we need
+            chunks_result = create_spatial_chunks(
                 data.numpy(),
                 mask=mask,
                 chunk_size=chunk_size,
                 chunk_overlap=chunk_overlap
             )
+
+            # Extract chunks and positions from the result
+            chunks = chunks_result[0]  # First item is always chunks
+            positions = chunks_result[1]  # Second item is always positions
 
             # Create feature map to store the results
             all_features = None
@@ -1491,7 +1527,8 @@ def run_pixel_wise_clustering(
         chunk_size=64,
         chunk_overlap=8,
         device='cuda' if torch.cuda.is_available() else 'cpu',
-        output_dir=None
+        output_dir=None,
+        calculate_metrics=True  # Add this parameter
 ):
     """
     Run efficient pixel-wise clustering on hyperspectral data.
@@ -1505,6 +1542,7 @@ def run_pixel_wise_clustering(
         chunk_overlap: Overlap between adjacent chunks
         device: Device to use for computation
         output_dir: Directory to save clustering results
+        calculate_metrics: Whether to calculate clustering quality metrics
 
     Returns:
         Dictionary with clustering results
@@ -1591,6 +1629,29 @@ def run_pixel_wise_clustering(
 
     print(f"Clustering complete. Found {len(np.unique(cluster_labels))} unique clusters")
 
+    # Calculate clustering metrics if requested
+    metrics = None
+    if calculate_metrics:
+        print("\nEvaluating clustering quality...")
+        metrics = evaluate_clustering_quality(
+            features=features,
+            cluster_labels=cluster_labels,
+            original_data=all_data,
+            mask=mask,
+            output_dir=output_dir
+        )
+
+        # Save metrics to file
+        if output_dir is not None:
+            metrics_file = os.path.join(output_dir, f"clustering_metrics_ex{excitation_to_use}_k{n_clusters}.json")
+            import json
+            with open(metrics_file, 'w') as f:
+                # Convert numpy values to Python types
+                metrics_dict = {k: float(v) if isinstance(v, (np.float32, np.float64)) else v
+                                for k, v in metrics.items()}
+                json.dump(metrics_dict, f, indent=2)
+            print(f"Clustering metrics saved to: {metrics_file}")
+
     # Return results
     results = {
         'cluster_labels': cluster_labels,
@@ -1600,6 +1661,9 @@ def run_pixel_wise_clustering(
         'spatial_shapes': spatial_shapes,
         'n_clusters': n_clusters
     }
+
+    if metrics is not None:
+        results['metrics'] = metrics
 
     return results
 
@@ -2391,22 +2455,22 @@ def overlay_clusters_on_rgb(
         overlay[mask_resized == 0] = (0, 0, 0, 0)
 
     # Create figure
-    plt.figure(figsize=(12, 10))
+    fig, ax = plt.subplots(figsize=(12, 10))
 
     # Show RGB image
-    plt.imshow(rgb_image)
+    ax.imshow(rgb_image)
 
     # Add overlay
-    plt.imshow(overlay, alpha=overlay[..., 3])
+    ax.imshow(overlay, alpha=overlay[..., 3])
 
-    # Add colorbar
+    # Add colorbar with axes reference
     sm = plt.cm.ScalarMappable(cmap=cluster_cmap)
     sm.set_array([])
-    cbar = plt.colorbar(sm, ticks=np.arange(n_clusters))
+    cbar = fig.colorbar(sm, ax=ax, ticks=np.arange(n_clusters))  # Added ax parameter
     cbar.set_ticklabels([f'Cluster {c}' for c in unique_clusters])
 
-    plt.title('Cluster Overlay on RGB Image')
-    plt.axis('off')
+    ax.set_title('Cluster Overlay on RGB Image')
+    ax.axis('off')
 
     # Save if path provided
     if output_path is not None:
@@ -2445,7 +2509,8 @@ def complete_hyperspectral_workflow(
         chunk_size=64,
         chunk_overlap=8,
         early_stopping_patience=5,
-        device='cuda' if torch.cuda.is_available() else 'cpu'
+        device='cuda' if torch.cuda.is_available() else 'cpu',
+        calculate_metrics=True
 ):
     """
     Run the complete hyperspectral data analysis workflow from loading to clustering.
@@ -2589,7 +2654,8 @@ def complete_hyperspectral_workflow(
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,
         device=device,
-        output_dir=cluster_dir
+        output_dir=cluster_dir,
+        calculate_metrics=calculate_metrics  # Pass parameter
     )
 
     # Step 8: Analyze cluster profiles
@@ -2633,3 +2699,1142 @@ def complete_hyperspectral_workflow(
     }
 
     return workflow_results
+
+
+def compare_preprocessing_methods(
+        input_data_paths,
+        preprocessing_configs,
+        output_dir,
+        n_clusters=5,
+        chunk_size=64,
+        device='cuda' if torch.cuda.is_available() else 'cpu'
+):
+    """
+    Compare different preprocessing methods based on clustering quality.
+
+    Args:
+        input_data_paths: Dictionary mapping config names to preprocessed data paths
+        preprocessing_configs: List of preprocessing configuration dictionaries
+        output_dir: Directory to save comparison results
+        n_clusters: Number of clusters for K-means
+        chunk_size: Size of spatial chunks for processing
+        device: Device to use for computation
+
+    Returns:
+        DataFrame with comparison results
+    """
+    import pandas as pd
+    import matplotlib.pyplot as plt
+    import os
+    import json
+    from pathlib import Path
+
+    print(f"Comparing {len(preprocessing_configs)} preprocessing methods...")
+
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Store results for each method
+    results = []
+
+    # Process each preprocessing method
+    for config in preprocessing_configs:
+        config_name = config['name']
+        config_path = input_data_paths[config_name]
+
+        print(f"\n=== Processing {config_name} ===")
+        print(f"Loading data from: {config_path}")
+
+        # Create subdirectory for this config
+        config_dir = os.path.join(output_dir, config_name)
+        os.makedirs(config_dir, exist_ok=True)
+
+        try:
+            # Step 1: Load data
+            with open(config_path, 'rb') as f:
+                data_dict = pickle.load(f)
+
+            # Step 2: Create dataset
+            print("Creating dataset...")
+            mask = config.get('mask_path', None)
+            if mask is not None:
+                mask = np.load(mask)
+
+            dataset = MaskedHyperspectralDataset(
+                data_dict=data_dict,
+                mask=mask,
+                normalize=config.get('normalize', True),
+                downscale_factor=config.get('downscale_factor', 1)
+            )
+
+            # Step 3: Create model
+            print("Creating model...")
+            all_data = dataset.get_all_data()
+
+            model = HyperspectralCAEWithMasking(
+                excitations_data={ex: data.numpy() for ex, data in all_data.items()},
+                k1=20,
+                k3=20,
+                filter_size=5,
+                sparsity_target=0.1,
+                sparsity_weight=1.0,
+                dropout_rate=0.5
+            )
+
+            # Step 4: Train model
+            model_dir = os.path.join(config_dir, "model")
+
+            model, losses = train_with_masking(
+                model=model,
+                dataset=dataset,
+                num_epochs=config.get('num_epochs', 50),
+                learning_rate=config.get('learning_rate', 0.001),
+                chunk_size=chunk_size,
+                chunk_overlap=chunk_size // 8,
+                batch_size=1,
+                device=device,
+                early_stopping_patience=config.get('early_stopping_patience', 5),
+                mask=dataset.processed_mask,
+                output_dir=model_dir
+            )
+
+            # Step 5: Run clustering
+            cluster_dir = os.path.join(config_dir, "clustering")
+
+            clustering_results = run_pixel_wise_clustering(
+                model=model,
+                dataset=dataset,
+                n_clusters=n_clusters,
+                excitation_to_use=config.get('excitation_to_use', None),
+                chunk_size=chunk_size,
+                chunk_overlap=chunk_size // 8,
+                device=device,
+                output_dir=cluster_dir,
+                calculate_metrics=True
+            )
+
+            # Extract metrics
+            metrics = clustering_results.get('metrics', {})
+
+            # Save metrics to file
+            metrics_file = os.path.join(config_dir, "clustering_metrics.json")
+            with open(metrics_file, 'w') as f:
+                # Convert numpy values to Python types
+                metrics_dict = {k: float(v) if isinstance(v, (np.float32, np.float64)) else v
+                                for k, v in metrics.items()}
+                json.dump(metrics_dict, f, indent=2)
+
+            # Add to results with config info
+            result_entry = {
+                'config_name': config_name,
+                'config': config,
+                'metrics': metrics,
+                'best_loss': min(losses) if losses else float('inf')
+            }
+
+            results.append(result_entry)
+
+            print(f"Completed processing for {config_name}")
+            print(f"Metrics: {metrics}")
+
+        except Exception as e:
+            print(f"Error processing {config_name}: {str(e)}")
+            import traceback
+            traceback.print_exc()
+
+    # Create comparison dataframe
+    comparison_data = []
+
+    for result in results:
+        row = {
+            'Preprocessing': result['config_name'],
+            'Autoencoder Loss': result['best_loss']
+        }
+
+        if 'metrics' in result and result['metrics']:
+            for metric, value in result['metrics'].items():
+                if isinstance(value, (int, float, np.number)):
+                    row[metric] = value
+
+        comparison_data.append(row)
+
+    # Create DataFrame
+    df = pd.DataFrame(comparison_data)
+
+    # Save to CSV
+    csv_path = os.path.join(output_dir, "preprocessing_comparison.csv")
+    df.to_csv(csv_path, index=False)
+    print(f"Comparison results saved to {csv_path}")
+
+    # Create visualizations
+    for metric in df.columns:
+        if metric not in ['Preprocessing']:
+            try:
+                plt.figure(figsize=(12, 6))
+                plt.bar(df['Preprocessing'], df[metric])
+                plt.title(f'Comparison of {metric} across preprocessing methods')
+                plt.xlabel('Preprocessing Method')
+                plt.ylabel(metric)
+                plt.xticks(rotation=45)
+                plt.tight_layout()
+                plt.savefig(os.path.join(output_dir, f"comparison_{metric.replace(' ', '_')}.png"))
+                plt.close()
+            except Exception as e:
+                print(f"Error creating chart for {metric}: {str(e)}")
+
+    try:
+        metrics = [col for col in df.columns if col != 'Preprocessing']
+
+        # Create radar chart
+        from matplotlib.path import Path as MplPath
+        from matplotlib.spines import Spine
+        from matplotlib.projections.polar import PolarAxes
+        from matplotlib.projections import register_projection
+
+        def radar_factory(num_vars, frame='circle'):
+            """Create a radar chart with `num_vars` axes."""
+            # Calculate evenly-spaced axis angles
+            theta = np.linspace(0, 2 * np.pi, num_vars, endpoint=False)
+
+            class RadarAxes(PolarAxes):
+                name = 'radar'
+
+                def __init__(self, *args, **kwargs):
+                    super().__init__(*args, **kwargs)
+                    self.set_theta_zero_location('N')
+
+                def fill(self, *args, **kwargs):
+                    """Override fill so that line is closed by default"""
+                    closed = kwargs.pop('closed', True)
+                    return super().fill(closed=closed, *args, **kwargs)
+
+                def plot(self, *args, **kwargs):
+                    """Override plot so that line is closed by default"""
+                    lines = super().plot(*args, **kwargs)
+                    for line in lines:
+                        self._close_line(line)
+                    return lines
+
+                def _close_line(self, line):
+                    x, y = line.get_data()
+                    # FIXME: markers at x[0], y[0] get doubled-up
+                    if x[0] != x[-1]:
+                        x = np.concatenate((x, [x[0]]))
+                        y = np.concatenate((y, [y[0]]))
+                        line.set_data(x, y)
+
+                def set_varlabels(self, labels):
+                    self.set_thetagrids(np.degrees(theta), labels)
+
+                def _gen_axes_patch(self):
+                    # The Axes patch must be centered at (0.5, 0.5) and of radius 0.5
+                    # in axes coordinates.
+                    if frame == 'circle':
+                        return Circle((0.5, 0.5), 0.5)
+                    elif frame == 'polygon':
+                        return RegularPolygon((0.5, 0.5), num_vars,
+                                              radius=.5, edgecolor="k")
+                    else:
+                        raise ValueError("unknown value for 'frame': %s" % frame)
+
+                def _gen_axes_spines(self):
+                    if frame == 'circle':
+                        return super()._gen_axes_spines()
+                    elif frame == 'polygon':
+                        # spine_type must be 'left'/'right'/'top'/'bottom'/'circle'.
+                        spine = Spine(axes=self,
+                                      spine_type='circle',
+                                      path=MplPath.unit_regular_polygon(num_vars))
+                        # unit_regular_polygon returns a polygon of radius 1 centered at
+                        # (0, 0) but we want a polygon of radius 0.5 centered at (0.5,
+                        # 0.5) in axes coordinates.
+                        spine.set_transform(Affine2D().scale(.5).translate(.5, .5)
+                                            + self.transAxes)
+                        return {'polar': spine}
+                    else:
+                        raise ValueError("unknown value for 'frame': %s" % frame)
+
+            register_projection(RadarAxes)
+            return theta
+
+        # Normalize metrics to [0, 1] range for radar chart
+        df_radar = df.copy()
+
+        for metric in metrics:
+            if df_radar[metric].min() == df_radar[metric].max():
+                # Skip metrics with no variation
+                continue
+
+            # Determine if higher or lower is better
+            higher_better = metric in ['silhouette_score', 'calinski_harabasz_score',
+                                       'spatial_coherence', 'min_spectral_angle']
+
+            if higher_better:
+                # Normalize such that higher values are better
+                df_radar[metric] = (df_radar[metric] - df_radar[metric].min()) / \
+                                   (df_radar[metric].max() - df_radar[metric].min())
+            else:
+                # For metrics where lower is better (like Davies-Bouldin or Loss)
+                # Invert so that lower values map to higher normalized values
+                df_radar[metric] = 1 - (df_radar[metric] - df_radar[metric].min()) / \
+                                   (df_radar[metric].max() - df_radar[metric].min())
+
+        # Keep only metrics with variation
+        varied_metrics = [m for m in metrics if df_radar[m].min() != df_radar[m].max()]
+
+        if varied_metrics:
+            # Create radar chart
+            theta = radar_factory(len(varied_metrics), frame='polygon')
+
+            fig, ax = plt.subplots(figsize=(9, 9), subplot_kw=dict(projection='radar'))
+            fig.subplots_adjust(wspace=0.25, hspace=0.20, top=0.85, bottom=0.05)
+
+            colors = plt.cm.viridis(np.linspace(0, 1, len(df_radar)))
+
+            for i, (idx, row) in enumerate(df_radar.iterrows()):
+                values = [row[m] for m in varied_metrics]
+                ax.plot(theta, values, color=colors[i])
+                ax.fill(theta, values, facecolor=colors[i], alpha=0.25)
+
+            ax.set_varlabels(varied_metrics)
+            ax.set_yticks([0, 0.25, 0.5, 0.75, 1])
+
+            # Add legend
+            legend = plt.legend(df_radar['Preprocessing'], loc=(0.9, 0.9),
+                                labelspacing=0.1, fontsize='small')
+
+            plt.title('Comparison of Preprocessing Methods (Normalized Metrics)')
+            plt.tight_layout()
+            plt.savefig(os.path.join(output_dir, "radar_comparison.png"))
+            plt.close()
+    except Exception as e:
+        print(f"Error creating radar chart: {str(e)}")
+        import traceback
+        traceback.print_exc()
+
+    return df
+
+
+def create_feature_selected_datasets(
+        input_pkl_path,
+        output_dir,
+        n_features=30,
+        methods=None,
+        create_visualizations=True
+):
+    """
+    Apply multiple feature selection methods to hyperspectral data and save as separate PKL files.
+
+    Args:
+        input_pkl_path: Path to preprocessed PKL file
+        output_dir: Directory to save results
+        n_features: Number of features/wavelengths to select
+        methods: List of methods to apply (default: all)
+        create_visualizations: Whether to create visualizations
+
+    Returns:
+        Dictionary mapping method names to output PKL paths
+    """
+    import os
+    import pickle
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from pathlib import Path
+    from sklearn.decomposition import PCA
+    from sklearn.manifold import TSNE
+    from sklearn.feature_selection import mutual_info_regression, f_classif
+    import copy
+
+    # Define all available methods
+    all_methods = [
+        'pca', 'spectral_variability', 'spectral_gradient',
+        'spatial_variability', 'mutual_information', 'band_ratio',
+        'spectral_angle', 'correlation_minimization', 'spectral_contrast',
+        'all_wavelengths'  # Baseline using all wavelengths
+    ]
+
+    # Use specified methods or all methods
+    methods = methods or all_methods
+
+    # Create output directory
+    os.makedirs(output_dir, exist_ok=True)
+    vis_dir = os.path.join(output_dir, "visualizations")
+    os.makedirs(vis_dir, exist_ok=True)
+
+    # Load input data
+    print(f"Loading data from {input_pkl_path}...")
+    with open(input_pkl_path, 'rb') as f:
+        data_dict = pickle.load(f)
+
+    # Track output PKL paths
+    output_paths = {}
+
+    # Get excitation wavelengths
+    if 'excitation_wavelengths' in data_dict:
+        excitation_wavelengths = data_dict['excitation_wavelengths']
+    else:
+        excitation_wavelengths = list(data_dict['data'].keys())
+
+    # Get data mapping - handle different data structures
+    if 'data' in data_dict and isinstance(data_dict['data'], dict):
+        data_mapping = data_dict['data']
+    else:
+        data_mapping = data_dict
+
+    # Process each method
+    for method in methods:
+        print(f"\n=== Processing method: {method} ===")
+
+        # Create a deep copy of the data
+        selected_data = copy.deepcopy(data_dict)
+        if 'data' in selected_data and isinstance(selected_data['data'], dict):
+            selected_data_mapping = selected_data['data']
+        else:
+            selected_data_mapping = selected_data
+
+        # Initialize wavelength importance tracking
+        wavelength_importance = {}
+        selected_wavelength_indices = {}
+
+        # Skip feature selection for baseline method
+        if method == 'all_wavelengths':
+            # No feature selection - use all wavelengths
+            output_path = os.path.join(output_dir, f"data_all_wavelengths.pkl")
+            with open(output_path, 'wb') as f:
+                pickle.dump(selected_data, f)
+            output_paths[method] = output_path
+            continue
+
+        # Apply feature selection for each excitation wavelength
+        for ex_str in excitation_wavelengths:
+            if isinstance(ex_str, (int, float)):
+                ex_str = str(ex_str)
+
+            if ex_str not in data_mapping:
+                print(f"  Skipping excitation {ex_str} - not found in data")
+                continue
+
+            # Get data cube and wavelengths
+            cube = data_mapping[ex_str]['cube']
+
+            if 'wavelengths' in data_mapping[ex_str]:
+                wavelengths = data_mapping[ex_str]['wavelengths']
+            else:
+                wavelengths = list(range(cube.shape[2]))
+
+            # Apply feature selection based on method
+            if method == 'pca':
+                # Reshape to [pixels, wavelengths]
+                h, w, bands = cube.shape
+                reshaped = cube.reshape(-1, bands)
+
+                # Remove NaN values
+                valid_mask = ~np.isnan(reshaped).any(axis=1)
+                valid_data = reshaped[valid_mask]
+
+                if len(valid_data) > 0:
+                    # Apply PCA
+                    pca = PCA(n_components=min(n_features, bands, len(valid_data)))
+                    pca.fit(valid_data)
+
+                    # Get feature importance from component loadings
+                    loadings = np.abs(pca.components_)
+                    importance = loadings.sum(axis=0)
+
+                    # Select top wavelengths
+                    top_indices = np.argsort(-importance)[:n_features]
+
+                    # Store importance
+                    wavelength_importance[ex_str] = {
+                        'importance': importance,
+                        'explained_variance': pca.explained_variance_ratio_
+                    }
+                else:
+                    # Fallback if all data is NaN
+                    top_indices = np.arange(min(n_features, bands))
+
+            elif method == 'spectral_variability':
+                # Calculate variance of each wavelength across all pixels
+                h, w, bands = cube.shape
+                reshaped = cube.reshape(-1, bands)
+
+                # Calculate variance, ignoring NaNs
+                variance = np.nanvar(reshaped, axis=0)
+
+                # Select wavelengths with highest variance
+                top_indices = np.argsort(-variance)[:n_features]
+
+                # Store importance
+                wavelength_importance[ex_str] = {'importance': variance}
+
+            elif method == 'spectral_gradient':
+                # Calculate gradient between adjacent wavelengths
+                h, w, bands = cube.shape
+                reshaped = cube.reshape(-1, bands)
+
+                # Calculate average gradient magnitude
+                gradients = np.zeros(bands)
+                for i in range(1, bands):
+                    # Difference between adjacent bands
+                    diff = np.abs(reshaped[:, i] - reshaped[:, i - 1])
+                    gradients[i] = np.nanmean(diff)
+
+                # First band gets same as second
+                gradients[0] = gradients[1]
+
+                # Select wavelengths with highest gradients
+                top_indices = np.argsort(-gradients)[:n_features]
+
+                # Store importance
+                wavelength_importance[ex_str] = {'importance': gradients}
+
+            elif method == 'spatial_variability':
+                # Calculate spatial variance within each wavelength
+                h, w, bands = cube.shape
+                spatial_variance = np.zeros(bands)
+
+                for b in range(bands):
+                    # Get this band
+                    band = cube[:, :, b]
+
+                    # Calculate spatial variance (local vs global mean)
+                    # Using a 3x3 window
+                    from scipy.ndimage import uniform_filter
+                    local_mean = uniform_filter(band, size=3, mode='reflect')
+                    global_mean = np.nanmean(band)
+
+                    # Variance between local and global mean
+                    variance = np.nanmean((local_mean - global_mean) ** 2)
+                    spatial_variance[b] = variance
+
+                # Select wavelengths with highest spatial variance
+                top_indices = np.argsort(-spatial_variance)[:n_features]
+
+                # Store importance
+                wavelength_importance[ex_str] = {'importance': spatial_variance}
+
+            elif method == 'mutual_information':
+                # Calculate mutual information between each wavelength and all others
+                h, w, bands = cube.shape
+                reshaped = cube.reshape(-1, bands)
+
+                # Remove NaN values
+                valid_mask = ~np.isnan(reshaped).any(axis=1)
+                valid_data = reshaped[valid_mask]
+
+                if len(valid_data) > 0:
+                    # Initialize mutual information scores
+                    mi_scores = np.zeros(bands)
+
+                    # Calculate MI of each band with all others
+                    for i in range(bands):
+                        # Use this band as target
+                        target = valid_data[:, i]
+
+                        # Calculate MI with all other bands
+                        other_bands = np.delete(valid_data, i, axis=1)
+                        mi = mutual_info_regression(other_bands, target)
+
+                        # Store average MI
+                        mi_scores[i] = np.mean(mi)
+
+                    # Select bands with highest mutual information
+                    top_indices = np.argsort(-mi_scores)[:n_features]
+
+                    # Store importance
+                    wavelength_importance[ex_str] = {'importance': mi_scores}
+                else:
+                    # Fallback if all data is NaN
+                    top_indices = np.arange(min(n_features, bands))
+
+            elif method == 'band_ratio':
+                # Calculate ratios between bands to find most informative combinations
+                h, w, bands = cube.shape
+                reshaped = cube.reshape(-1, bands)
+
+                # Initialize scores
+                ratio_scores = np.zeros(bands)
+
+                # For each band, calculate average ratio variance with other bands
+                for i in range(bands):
+                    ratio_vars = []
+                    for j in range(bands):
+                        if i != j:
+                            # Calculate ratio, avoiding division by zero
+                            ratio = np.divide(
+                                reshaped[:, i],
+                                reshaped[:, j],
+                                out=np.zeros_like(reshaped[:, i]),
+                                where=reshaped[:, j] != 0
+                            )
+                            # Calculate variance of ratio
+                            ratio_vars.append(np.nanvar(ratio))
+
+                    # Store average ratio variance
+                    if ratio_vars:
+                        ratio_scores[i] = np.mean(ratio_vars)
+
+                # Select bands with highest ratio variance
+                top_indices = np.argsort(-ratio_scores)[:n_features]
+
+                # Store importance
+                wavelength_importance[ex_str] = {'importance': ratio_scores}
+
+            elif method == 'spectral_angle':
+                # Calculate average spectral angle between pixels
+                h, w, bands = cube.shape
+                reshaped = cube.reshape(-1, bands)
+
+                # Remove NaN values
+                valid_mask = ~np.isnan(reshaped).any(axis=1)
+                valid_data = reshaped[valid_mask]
+
+                if len(valid_data) > 0:
+                    # Calculate mean spectrum
+                    mean_spectrum = np.mean(valid_data, axis=0)
+
+                    # Calculate spectral angle for each band
+                    angle_importance = np.zeros(bands)
+
+                    for i in range(bands):
+                        # Set this band to zero in a copy of the mean spectrum
+                        mod_spectrum = mean_spectrum.copy()
+                        mod_spectrum[i] = 0
+
+                        # Calculate dot product (normalized)
+                        norm_mean = np.linalg.norm(mean_spectrum)
+                        norm_mod = np.linalg.norm(mod_spectrum)
+
+                        if norm_mean > 0 and norm_mod > 0:
+                            dot_product = np.dot(mean_spectrum, mod_spectrum)
+                            cos_angle = dot_product / (norm_mean * norm_mod)
+                            # Ensure it's in valid range due to numerical issues
+                            cos_angle = np.clip(cos_angle, -1.0, 1.0)
+                            angle = np.arccos(cos_angle)
+                            angle_importance[i] = angle
+
+                    # Select bands that cause largest spectral angle change
+                    top_indices = np.argsort(-angle_importance)[:n_features]
+
+                    # Store importance
+                    wavelength_importance[ex_str] = {'importance': angle_importance}
+                else:
+                    # Fallback if all data is NaN
+                    top_indices = np.arange(min(n_features, bands))
+
+            elif method == 'correlation_minimization':
+                # Select wavelengths with minimal correlation
+                h, w, bands = cube.shape
+                reshaped = cube.reshape(-1, bands)
+
+                # Remove NaN values
+                valid_mask = ~np.isnan(reshaped).any(axis=1)
+                valid_data = reshaped[valid_mask]
+
+                if len(valid_data) > 0:
+                    # Calculate correlation matrix
+                    corr_matrix = np.corrcoef(valid_data.T)
+
+                    # Replace NaNs with 1 (perfect correlation)
+                    corr_matrix = np.nan_to_num(corr_matrix, nan=1.0)
+
+                    # Greedy approach: select bands with minimal correlation to already selected
+                    selected = []
+                    # Start with band with highest variance
+                    variance = np.nanvar(valid_data, axis=0)
+                    first_idx = np.argmax(variance)
+                    selected.append(first_idx)
+
+                    # Add bands one by one
+                    while len(selected) < min(n_features, bands):
+                        # Calculate average absolute correlation with selected bands
+                        avg_corr = np.zeros(bands)
+                        for i in range(bands):
+                            if i not in selected:
+                                corrs = [np.abs(corr_matrix[i, j]) for j in selected]
+                                avg_corr[i] = np.mean(corrs)
+                            else:
+                                avg_corr[i] = 1.0  # Max correlation for already selected
+
+                        # Select band with minimum correlation to already selected
+                        next_idx = np.argmin(avg_corr)
+                        selected.append(next_idx)
+
+                    top_indices = np.array(selected)
+
+                    # Create importance scores (inverse of average correlation)
+                    importance = np.zeros(bands)
+                    for i in range(bands):
+                        corrs = [np.abs(corr_matrix[i, j]) for j in range(bands) if i != j]
+                        avg_corr = np.mean(corrs)
+                        importance[i] = 1.0 - avg_corr  # Higher value = less correlation
+
+                    # Store importance
+                    wavelength_importance[ex_str] = {'importance': importance}
+                else:
+                    # Fallback if all data is NaN
+                    top_indices = np.arange(min(n_features, bands))
+
+            elif method == 'spectral_contrast':
+                # Select wavelengths with highest contrast between regions
+                h, w, bands = cube.shape
+
+                # Calculate contrast score for each wavelength
+                contrast_scores = np.zeros(bands)
+
+                for b in range(bands):
+                    # Get this band
+                    band = cube[:, :, b]
+
+                    # Calculate local contrast
+                    from scipy.ndimage import gaussian_filter
+                    blurred = gaussian_filter(band, sigma=2)
+                    contrast = np.nanmean(np.abs(band - blurred))
+                    contrast_scores[b] = contrast
+
+                # Select wavelengths with highest contrast
+                top_indices = np.argsort(-contrast_scores)[:n_features]
+
+                # Store importance
+                wavelength_importance[ex_str] = {'importance': contrast_scores}
+
+            # Store selected indices
+            selected_wavelength_indices[ex_str] = top_indices
+
+            # Keep only selected wavelengths in output data
+            selected_data_mapping[ex_str]['cube'] = cube[:, :, top_indices]
+
+            if 'wavelengths' in selected_data_mapping[ex_str]:
+                selected_data_mapping[ex_str]['wavelengths'] = [wavelengths[i] for i in top_indices]
+
+            print(f"  Excitation {ex_str}: Selected {len(top_indices)} wavelengths")
+
+        # Store wavelength selection information in metadata
+        if 'metadata' not in selected_data:
+            selected_data['metadata'] = {}
+
+        selected_data['metadata']['wavelength_selection'] = {
+            'method': method,
+            'n_features': n_features,
+            'selected_indices': selected_wavelength_indices,
+            'importance': wavelength_importance
+        }
+
+        # Save selected data
+        output_path = os.path.join(output_dir, f"data_{method}_{n_features}.pkl")
+        with open(output_path, 'wb') as f:
+            pickle.dump(selected_data, f)
+
+        output_paths[method] = output_path
+        print(f"  Selected data saved to {output_path}")
+
+        # Create visualizations
+        if create_visualizations:
+            # Create directory for this method
+            method_vis_dir = os.path.join(vis_dir, method)
+            os.makedirs(method_vis_dir, exist_ok=True)
+
+            # Plot wavelength importance for each excitation
+            for ex_str, importance_dict in wavelength_importance.items():
+                if 'importance' in importance_dict:
+                    importance = importance_dict['importance']
+
+                    plt.figure(figsize=(12, 6))
+                    if 'wavelengths' in data_mapping[ex_str]:
+                        wavelengths = data_mapping[ex_str]['wavelengths']
+                        plt.bar(wavelengths, importance)
+                        plt.xlabel('Wavelength (nm)')
+                    else:
+                        plt.bar(range(len(importance)), importance)
+                        plt.xlabel('Band Index')
+
+                    plt.ylabel('Importance Score')
+                    plt.title(f'Wavelength Importance - {method.replace("_", " ").title()} - Ex {ex_str}nm')
+                    plt.grid(alpha=0.3)
+                    plt.tight_layout()
+                    plt.savefig(os.path.join(method_vis_dir, f"importance_ex{ex_str}.png"))
+                    plt.close()
+
+                    # Plot selected wavelengths
+                    top_indices = selected_wavelength_indices[ex_str]
+                    plt.figure(figsize=(12, 6))
+
+                    if 'wavelengths' in data_mapping[ex_str]:
+                        wavelengths = data_mapping[ex_str]['wavelengths']
+                        all_x = wavelengths
+                        selected_x = [wavelengths[i] for i in top_indices]
+                    else:
+                        all_x = range(len(importance))
+                        selected_x = top_indices
+
+                    # Plot all wavelengths
+                    plt.plot(all_x, importance, 'b-', alpha=0.5, label='All Wavelengths')
+
+                    # Highlight selected wavelengths
+                    selected_y = [importance[i] for i in top_indices]
+                    plt.scatter(selected_x, selected_y, color='red', s=50, label=f'Selected ({len(top_indices)})')
+
+                    plt.xlabel('Wavelength (nm)' if 'wavelengths' in data_mapping[ex_str] else 'Band Index')
+                    plt.ylabel('Importance Score')
+                    plt.title(f'Selected Wavelengths - {method.replace("_", " ").title()} - Ex {ex_str}nm')
+                    plt.legend()
+                    plt.grid(alpha=0.3)
+                    plt.tight_layout()
+                    plt.savefig(os.path.join(method_vis_dir, f"selected_ex{ex_str}.png"))
+                    plt.close()
+
+    # Create summary visualization
+    if create_visualizations:
+        # Compare number of selected features across methods
+        methods_to_compare = [m for m in methods if m != 'all_wavelengths']
+        if methods_to_compare:
+            try:
+                # Get a common excitation for comparison
+                common_ex = None
+                for ex in excitation_wavelengths:
+                    if str(ex) in data_mapping:
+                        common_ex = str(ex)
+                        break
+
+                if common_ex:
+                    # Create comparison plot
+                    plt.figure(figsize=(14, 8))
+
+                    # Get wavelengths for this excitation
+                    if 'wavelengths' in data_mapping[common_ex]:
+                        wavelengths = data_mapping[common_ex]['wavelengths']
+                        x_values = wavelengths
+                        x_label = 'Wavelength (nm)'
+                    else:
+                        band_count = data_mapping[common_ex]['cube'].shape[2]
+                        x_values = range(band_count)
+                        x_label = 'Band Index'
+
+                    # Plot histogram of selected wavelengths
+                    selection_counts = np.zeros(len(x_values))
+
+                    for method in methods_to_compare:
+                        if method in output_paths:
+                            # Load data to get selection info
+                            with open(output_paths[method], 'rb') as f:
+                                method_data = pickle.load(f)
+
+                            # Get selected indices
+                            if 'metadata' in method_data and 'wavelength_selection' in method_data['metadata']:
+                                selection_info = method_data['metadata']['wavelength_selection']
+                                if 'selected_indices' in selection_info and common_ex in selection_info[
+                                    'selected_indices']:
+                                    indices = selection_info['selected_indices'][common_ex]
+                                    # Increment count for each selected wavelength
+                                    for idx in indices:
+                                        if idx < len(selection_counts):
+                                            selection_counts[idx] += 1
+
+                    # Plot histogram
+                    plt.bar(x_values, selection_counts, alpha=0.7)
+                    plt.xlabel(x_label)
+                    plt.ylabel('Selection Count')
+                    plt.title(f'Wavelength Selection Frequency Across Methods (Ex {common_ex}nm)')
+                    plt.grid(alpha=0.3)
+                    plt.tight_layout()
+                    plt.savefig(os.path.join(vis_dir, "wavelength_selection_frequency.png"))
+                    plt.close()
+            except Exception as e:
+                print(f"Error creating summary visualization: {str(e)}")
+
+    return output_paths
+
+
+def compare_feature_selection_methods(
+        input_dir,
+        output_dir,
+        n_clusters=5,
+        methods=None,
+        chunk_size=64,
+        device='cuda' if torch.cuda.is_available() else 'cpu',
+        num_epochs = 50
+):
+    """
+    Compare different feature selection methods using clustering.
+
+    Args:
+        input_dir: Directory containing feature-selected PKL files
+        output_dir: Directory to save comparison results
+        n_clusters: Number of clusters for K-means
+        methods: List of methods to compare (default: all PKL files in input_dir)
+        chunk_size: Size of spatial chunks for processing
+        device: Computing device
+
+    Returns:
+        DataFrame with comparison results
+    """
+    import os
+    import glob
+    import pandas as pd
+    import matplotlib.pyplot as plt
+    import numpy as np
+    from pathlib import Path
+    import pickle
+    import json
+
+    # Create output directory
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Get input files if methods not specified
+    if methods is None:
+        # Get all PKL files in input directory
+        pkl_files = glob.glob(os.path.join(input_dir, "data_*.pkl"))
+        methods = [Path(f).stem.split('_', 1)[1] for f in pkl_files]
+
+    # Map methods to input files
+    input_files = {}
+    for method in methods:
+        method_file = os.path.join(input_dir, f"data_{method}.pkl")
+        if os.path.exists(method_file):
+            input_files[method] = method_file
+        else:
+            print(f"Warning: File not found for method {method}")
+
+    print(f"Comparing {len(input_files)} feature selection methods...")
+
+    # Initialize results
+    results = []
+
+    # Process each method
+    for method, input_file in input_files.items():
+        print(f"\n=== Processing method: {method} ===")
+
+        # Create method output directory
+        method_dir = os.path.join(output_dir, method)
+        os.makedirs(method_dir, exist_ok=True)
+
+        try:
+            # Process this feature selection method using the autoencoder pipeline
+            workflow_results = complete_hyperspectral_workflow(
+                data_path=input_file,
+                output_dir=method_dir,
+                n_clusters=n_clusters,
+                normalize=True,
+                chunk_size=chunk_size,
+                device=device,
+                calculate_metrics=True,
+                num_epochs=num_epochs
+            )
+
+            # Extract clustering metrics
+            if 'clustering' in workflow_results and 'metrics' in workflow_results['clustering']:
+                metrics = workflow_results['clustering']['metrics']
+            else:
+                metrics = {}
+
+            # Extract best loss
+            if 'training_losses' in workflow_results:
+                losses = workflow_results['training_losses']
+                best_loss = min(losses) if losses else float('inf')
+            else:
+                best_loss = float('inf')
+
+            # Add feature selection info
+            with open(input_file, 'rb') as f:
+                data = pickle.load(f)
+
+            feature_info = {}
+            if 'metadata' in data and 'wavelength_selection' in data['metadata']:
+                feature_info = data['metadata']['wavelength_selection']
+
+            # Add to results
+            result_entry = {
+                'method': method,
+                'input_file': input_file,
+                'output_dir': method_dir,
+                'metrics': metrics,
+                'best_loss': best_loss,
+                'feature_info': feature_info
+            }
+
+            results.append(result_entry)
+
+            print(f"Completed processing for method: {method}")
+            if metrics:
+                print(f"Metrics: {metrics}")
+
+        except Exception as e:
+            print(f"Error processing method {method}: {str(e)}")
+            import traceback
+            traceback.print_exc()
+
+    # Create comparison dataframe
+    comparison_data = []
+
+    for result in results:
+        row = {
+            'Method': result['method'],
+            'Autoencoder Loss': result['best_loss']
+        }
+
+        # Add metrics to row
+        if 'metrics' in result and result['metrics']:
+            for metric, value in result['metrics'].items():
+                if isinstance(value, (int, float, np.number)):
+                    row[metric] = value
+
+        comparison_data.append(row)
+
+    # Create DataFrame
+    df = pd.DataFrame(comparison_data)
+
+    # Save to CSV
+    csv_path = os.path.join(output_dir, "feature_selection_comparison.csv")
+    df.to_csv(csv_path, index=False)
+    print(f"Comparison results saved to {csv_path}")
+
+    # Create visualizations
+    for metric in df.columns:
+        if metric not in ['Method']:
+            try:
+                plt.figure(figsize=(12, 6))
+                plt.bar(df['Method'], df[metric])
+                plt.title(f'Comparison of {metric} across Feature Selection Methods')
+                plt.xlabel('Feature Selection Method')
+                plt.ylabel(metric)
+                plt.xticks(rotation=45)
+                plt.tight_layout()
+                plt.savefig(os.path.join(output_dir, f"comparison_{metric.replace(' ', '_')}.png"))
+                plt.close()
+            except Exception as e:
+                print(f"Error creating chart for {metric}: {str(e)}")
+
+    # Create radar chart for overall comparison
+    try:
+        # Select metrics for radar chart
+        metrics_to_plot = [col for col in df.columns if col not in ['Method']]
+
+        if len(metrics_to_plot) >= 3:  # Need at least 3 metrics for radar chart
+            from matplotlib.path import Path as MplPath
+            from matplotlib.spines import Spine
+            from matplotlib.transforms import Affine2D
+            from matplotlib.projections.polar import PolarAxes
+            from matplotlib.projections import register_projection
+            from matplotlib.patches import Circle, RegularPolygon
+
+            # Normalize metrics for radar chart
+            df_radar = df.copy()
+
+            for metric in metrics_to_plot:
+                # Skip metrics with no variation
+                if df_radar[metric].min() == df_radar[metric].max():
+                    continue
+
+                # Determine if higher is better
+                higher_better = metric in ['silhouette_score', 'calinski_harabasz_score', 'spatial_coherence']
+
+                if higher_better:
+                    # Normalize such that higher values are better (0-1 scale)
+                    df_radar[metric] = (df_radar[metric] - df_radar[metric].min()) / \
+                                       (df_radar[metric].max() - df_radar[metric].min())
+                else:
+                    # For metrics where lower is better (like DB index)
+                    # Invert so 1 is best, 0 is worst
+                    df_radar[metric] = 1 - (df_radar[metric] - df_radar[metric].min()) / \
+                                       (df_radar[metric].max() - df_radar[metric].min())
+
+            # Filter to metrics with variation
+            valid_metrics = [m for m in metrics_to_plot if df_radar[m].min() != df_radar[m].max()]
+
+            if valid_metrics:
+                # Create radar chart factory
+                def radar_factory(num_vars, frame='circle'):
+                    """Create a radar chart with `num_vars` axes."""
+                    # Calculate evenly-spaced axis angles
+                    theta = np.linspace(0, 2 * np.pi, num_vars, endpoint=False)
+
+                    class RadarAxes(PolarAxes):
+                        name = 'radar'
+
+                        def __init__(self, *args, **kwargs):
+                            super().__init__(*args, **kwargs)
+                            self.set_theta_zero_location('N')
+
+                        def fill(self, *args, **kwargs):
+                            """Override fill so that line is closed by default"""
+                            closed = kwargs.pop('closed', True)
+                            return super().fill(closed=closed, *args, **kwargs)
+
+                        def plot(self, *args, **kwargs):
+                            """Override plot so that line is closed by default"""
+                            lines = super().plot(*args, **kwargs)
+                            for line in lines:
+                                self._close_line(line)
+                            return lines
+
+                        def _close_line(self, line):
+                            x, y = line.get_data()
+                            # FIXME: markers at x[0], y[0] get doubled-up
+                            if x[0] != x[-1]:
+                                x = np.concatenate((x, [x[0]]))
+                                y = np.concatenate((y, [y[0]]))
+                                line.set_data(x, y)
+
+                        def set_varlabels(self, labels):
+                            self.set_thetagrids(np.degrees(theta), labels)
+
+                        def _gen_axes_patch(self):
+                            # The Axes patch must be centered at (0.5, 0.5) and of radius 0.5
+                            # in axes coordinates.
+                            if frame == 'circle':
+                                return Circle((0.5, 0.5), 0.5)
+                            elif frame == 'polygon':
+                                return RegularPolygon((0.5, 0.5), num_vars,
+                                                      radius=.5, edgecolor="k")
+                            else:
+                                raise ValueError("unknown value for 'frame': %s" % frame)
+
+                        def _gen_axes_spines(self):
+                            if frame == 'circle':
+                                return super()._gen_axes_spines()
+                            elif frame == 'polygon':
+                                # spine_type must be 'left'/'right'/'top'/'bottom'/'circle'.
+                                spine = Spine(axes=self,
+                                              spine_type='circle',
+                                              path=MplPath.unit_regular_polygon(num_vars))
+                                # Unit regular polygon returns a polygon of radius 1 centered at
+                                # (0, 0) but we want a polygon of radius 0.5 centered at (0.5,
+                                # 0.5) in axes coordinates.
+                                spine.set_transform(Affine2D().scale(.5).translate(.5, .5)
+                                                    + self.transAxes)
+                                return {'polar': spine}
+                            else:
+                                raise ValueError("unknown value for 'frame': %s" % frame)
+
+                    register_projection(RadarAxes)
+                    return theta
+
+                # Create radar chart
+                theta = radar_factory(len(valid_metrics), frame='polygon')
+
+                fig, ax = plt.subplots(figsize=(9, 9), subplot_kw=dict(projection='radar'))
+                fig.subplots_adjust(wspace=0.25, hspace=0.20, top=0.85, bottom=0.05)
+
+                colors = plt.cm.tab10(np.linspace(0, 1, len(df_radar)))
+
+                for i, (_, row) in enumerate(df_radar.iterrows()):
+                    values = [row[m] for m in valid_metrics]
+                    ax.plot(theta, values, color=colors[i % 10])
+                    ax.fill(theta, values, facecolor=colors[i % 10], alpha=0.25)
+
+                ax.set_varlabels(valid_metrics)
+                ax.set_yticks([0, 0.25, 0.5, 0.75, 1])
+
+                # Add legend
+                legend = plt.legend(df_radar['Method'], loc=(0.9, 0.9),
+                                    labelspacing=0.1, fontsize='small')
+
+                plt.title('Comparison of Feature Selection Methods (Normalized Metrics)')
+                plt.tight_layout()
+                plt.savefig(os.path.join(output_dir, "radar_comparison.png"))
+                plt.close()
+    except Exception as e:
+        print(f"Error creating radar chart: {str(e)}")
+        import traceback
+        traceback.print_exc()
+
+    return df
