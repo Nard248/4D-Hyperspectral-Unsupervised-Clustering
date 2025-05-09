@@ -1,5 +1,9 @@
-import numpy as np
+"""
+Comprehensive hyperspectral data processor for normalization and advanced processing.
+"""
+
 import os
+import numpy as np
 import pandas as pd
 from pathlib import Path
 import matplotlib.pyplot as plt
@@ -8,6 +12,9 @@ import pickle
 import copy
 import warnings
 from typing import Optional, Tuple, Dict, List, Union, Any
+
+from .hyperspectral_loader import HyperspectralDataLoader
+from .hyperspectral_utils import load_data_from_pickle, save_data_to_pickle, load_data_and_create_df
 
 
 class HyperspectralProcessor:
@@ -35,22 +42,22 @@ class HyperspectralProcessor:
             use_fiji: Whether to use ImageJ/Fiji for loading
             verbose: Whether to print processing progress
         """
-        self.data_path = data_path
-        self.metadata_path = metadata_path
-        self.laser_power_excel = laser_power_excel
+        # Convert paths to Path objects for better cross-platform compatibility
+        self.data_path = Path(data_path) if data_path else None
+        self.metadata_path = Path(metadata_path) if metadata_path else None
+        self.laser_power_excel = Path(laser_power_excel) if laser_power_excel else None
         self.cutoff_offset = cutoff_offset
         self.use_fiji = use_fiji
         self.verbose = verbose
 
-        # Import HyperspectralDataLoader
-        try:
-            from HyperspectralDataLoader import HyperspectralDataLoader
-            self.loader_class = HyperspectralDataLoader
-        except ImportError:
-            raise ImportError("HyperspectralDataLoader not found. Make sure it's in your Python path.")
-
-        # Patch the HyperspectralDataLoader class to use dual cutoff
-        self._patch_loader_class()
+        # Create a loader instance directly
+        self.loader = HyperspectralDataLoader(
+            data_path=str(self.data_path) if self.data_path else None,
+            metadata_path=str(self.metadata_path) if self.metadata_path else None,
+            cutoff_offset=cutoff_offset,
+            use_fiji=use_fiji,
+            verbose=verbose
+        )
 
         # Data containers
         self.raw_data = None
@@ -65,61 +72,6 @@ class HyperspectralProcessor:
         self.exposure_norm_file = None
         self.power_norm_file = None
 
-        # Create the loader
-        self.loader = self.loader_class(
-            data_path=data_path,
-            metadata_path=metadata_path,
-            cutoff_offset=cutoff_offset,
-            use_fiji=use_fiji,
-            verbose=verbose
-        )
-
-    def _patch_loader_class(self):
-        """
-        Patch the HyperspectralDataLoader class to use dual cutoff
-        (both Rayleigh and second-order).
-        """
-
-        def new_apply_spectral_cutoff(self, data, wavelengths, excitation):
-            """
-            Apply both Rayleigh and second-order spectral cutoffs.
-            """
-            # Convert wavelengths to numpy array if it's not already
-            wavelengths_arr = np.array(wavelengths)
-
-            # Create a mask to keep valid wavelengths
-            keep_mask = np.ones(len(wavelengths_arr), dtype=bool)
-
-            # 1. Apply Rayleigh cutoff - remove wavelengths below (excitation + rayleigh_offset)
-            rayleigh_cutoff = excitation + self.cutoff_offset
-            rayleigh_mask = wavelengths_arr >= rayleigh_cutoff
-            keep_mask = np.logical_and(keep_mask, rayleigh_mask)
-
-            # 2. Apply second-order cutoff - remove wavelengths in (2*excitation ± cutoff_offset)
-            second_order_min = 2 * excitation - self.cutoff_offset
-            second_order_max = 2 * excitation + self.cutoff_offset
-            second_order_mask = np.logical_or(wavelengths_arr < second_order_min, wavelengths_arr > second_order_max)
-            keep_mask = np.logical_and(keep_mask, second_order_mask)
-
-            # Apply the combined mask to the third dimension (emission wavelengths)
-            filtered_data = data[:, :, keep_mask]
-            filtered_wavelengths = wavelengths_arr[keep_mask].tolist()
-
-            if self.verbose:
-                print(f"Applied dual cutoff for excitation {excitation}nm")
-                print(f"Removed wavelengths below {rayleigh_cutoff}nm (Rayleigh cutoff)")
-                print(
-                    f"Removed wavelengths between {second_order_min}nm and {second_order_max}nm (second-order cutoff)")
-                print(f"Original data shape: {data.shape}, filtered shape: {filtered_data.shape}")
-
-            return filtered_data, filtered_wavelengths
-
-        # Patch the method in the class
-        self.loader_class.apply_spectral_cutoff = new_apply_spectral_cutoff
-
-        if self.verbose:
-            print("HyperspectralDataLoader patched to apply dual cutoff (Rayleigh and second-order)")
-
     def load_data(self, apply_cutoff: bool = True, pattern: str = "*.im3") -> Dict:
         """
         Load hyperspectral data from .im3 files with dual cutoff.
@@ -131,7 +83,7 @@ class HyperspectralProcessor:
         Returns:
             Dictionary of processed data
         """
-        # Load the data
+        # Load the data using the loader
         self.data_with_cutoff = self.loader.load_data(apply_cutoff=apply_cutoff, pattern=pattern)
         self.raw_data = self.loader.raw_data
 
@@ -185,6 +137,12 @@ class HyperspectralProcessor:
         """
         Helper function to handle different data dictionary structures.
         Returns the actual mapping of excitation wavelengths to data.
+
+        Args:
+            data_dict: Data dictionary to extract mapping from
+
+        Returns:
+            Dictionary mapping excitation wavelengths to data
         """
         # First, check if this is a pickled file structure (with 'data' key at top level)
         if 'data' in data_dict and isinstance(data_dict['data'], dict):
@@ -221,12 +179,6 @@ class HyperspectralProcessor:
         # Get the actual mapping of excitation wavelengths to data
         data_mapping = self._get_data_mapping(data_dict)
         norm_data_mapping = self._get_data_mapping(normalized_data)
-
-        # Print data structure for debugging
-        if self.verbose:
-            print(f"Data dictionary keys: {list(data_dict.keys())}")
-            if 'data' in data_dict:
-                print("Found 'data' key at top level")
 
         # Extract exposure times
         exposure_times = {}
@@ -299,6 +251,8 @@ class HyperspectralProcessor:
             if self.verbose:
                 print(f"Exposure normalization plot saved to: {plot_file}")
 
+        plt.close(fig)
+
         # Normalize each data cube
         print("Normalizing data cubes by exposure time...")
         for ex_str, exposure in exposure_times.items():
@@ -317,8 +271,7 @@ class HyperspectralProcessor:
 
         # Save the normalized data
         if output_file:
-            with open(output_file, 'wb') as f:
-                pickle.dump(normalized_data, f)
+            save_data_to_pickle(normalized_data, output_file)
             self.exposure_norm_file = output_file
             print(f"Exposure normalized data saved to {output_file}")
 
@@ -430,6 +383,8 @@ class HyperspectralProcessor:
             if self.verbose:
                 print(f"Laser power normalization plot saved to: {plot_file}")
 
+        plt.close(fig)
+
         # Normalize each data cube
         print("Normalizing data cubes by laser power...")
         for ex_str in data_mapping.keys():
@@ -457,8 +412,7 @@ class HyperspectralProcessor:
 
         # Save the normalized data
         if output_file:
-            with open(output_file, 'wb') as f:
-                pickle.dump(normalized_data, f)
+            save_data_to_pickle(normalized_data, output_file)
             self.power_norm_file = output_file
             print(f"Laser power normalized data saved to {output_file}")
 
@@ -472,7 +426,8 @@ class HyperspectralProcessor:
                               exposure_reference: str = 'max',
                               power_reference: str = 'max',
                               create_parquet: bool = True,
-                              sample_size: Optional[int] = None) -> Dict[str, str]:
+                              sample_size: Optional[int] = None,
+                              preserve_full_data: bool = True) -> Dict[str, str]:
         """
         Run the full pipeline: load data, apply cutoffs, normalize by exposure and laser power.
 
@@ -482,7 +437,7 @@ class HyperspectralProcessor:
             power_reference: Reference type for laser power normalization ('min', 'max', 'mean')
             create_parquet: Whether to create parquet files for analysis
             sample_size: Optional number of random pixels to sample for parquet files
-
+            preserve_full_data: Preserve full data of do reduction
         Returns:
             Dictionary mapping processing stages to their output file paths
         """
@@ -522,15 +477,12 @@ class HyperspectralProcessor:
             'cutoff_offset': self.cutoff_offset
         }
 
-        with open(str(cutoff_file), 'wb') as f:
-            pickle.dump(pkl_data, f)
-
+        save_data_to_pickle(pkl_data, cutoff_file)
         self.cutoff_file = str(cutoff_file)
         print(f"Data with dual cutoff saved to: {cutoff_file}")
 
         # Load the pickle file to ensure correct structure
-        with open(str(cutoff_file), 'rb') as f:
-            loaded_data = pickle.load(f)
+        loaded_data = load_data_from_pickle(cutoff_file)
 
         # Step 2: Normalize by exposure time
         print(f"\n=== Step 2: Normalizing by exposure time ({exposure_reference} reference) ===")
@@ -541,8 +493,7 @@ class HyperspectralProcessor:
         )
 
         # Load the exposure-normalized data
-        with open(str(exposure_norm_file), 'rb') as f:
-            exposure_normalized_data = pickle.load(f)
+        exposure_normalized_data = load_data_from_pickle(exposure_norm_file)
 
         # Step 3: Normalize by laser power
         print(f"\n=== Step 3: Normalizing by laser power ({power_reference} reference) ===")
@@ -568,25 +519,26 @@ class HyperspectralProcessor:
             print("\n=== Step 4: Creating parquet files ===")
 
             try:
-                from HyperspectralDataLoader import load_data_and_create_df, save_dataframe
-
                 # Create parquet for dual cutoff
                 cutoff_parquet = str(cutoff_file).replace('.pkl', '.parquet')
-                df_cutoff = load_data_and_create_df(str(cutoff_file), sample_size)
-                save_dataframe(df_cutoff, cutoff_parquet)
+                df_cutoff = load_data_and_create_df(str(cutoff_file), sample_size, preserve_full_data)
+                df_cutoff.to_parquet(cutoff_parquet, index=False)
                 output_files['cutoff_parquet'] = cutoff_parquet
+                print(f"Cutoff data saved to parquet: {cutoff_parquet}")
 
                 # Create parquet for exposure normalized
                 exposure_parquet = str(exposure_norm_file).replace('.pkl', '.parquet')
-                df_exposure = load_data_and_create_df(str(exposure_norm_file), sample_size)
-                save_dataframe(df_exposure, exposure_parquet)
+                df_exposure = load_data_and_create_df(str(exposure_norm_file), sample_size, preserve_full_data)
+                df_exposure.to_parquet(exposure_parquet, index=False)
                 output_files['exposure_parquet'] = exposure_parquet
+                print(f"Exposure normalized data saved to parquet: {exposure_parquet}")
 
                 # Create parquet for power normalized
                 power_parquet = str(power_norm_file).replace('.pkl', '.parquet')
-                df_power = load_data_and_create_df(str(power_norm_file), sample_size)
-                save_dataframe(df_power, power_parquet)
+                df_power = load_data_and_create_df(str(power_norm_file), sample_size, preserve_full_data)
+                df_power.to_parquet(power_parquet, index=False)
                 output_files['power_parquet'] = power_parquet
+                print(f"Power normalized data saved to parquet: {power_parquet}")
 
             except Exception as e:
                 warnings.warn(f"Error creating parquet files: {str(e)}")
@@ -651,23 +603,3 @@ class HyperspectralProcessor:
                         print(f"    Data shape: {cube.shape}")
                         print(f"    Emission range: {min(wavelengths)}nm - {max(wavelengths)}nm")
                         print(f"    Number of emission bands: {len(wavelengths)}")
-
-
-# Example usage
-if __name__ == "__main__":
-    processor = HyperspectralProcessor(
-        data_path="../Data/Lime",
-        metadata_path="../Data/Lime/metadata.xlsx",
-        laser_power_excel="../Data/Lime/TLS Scans/average_power.xlsx",
-        cutoff_offset=40,
-        verbose=True
-    )
-
-    output_files = processor.process_full_pipeline(
-        output_dir="Data/Lime Experiment - 2/processed",
-        exposure_reference="max",
-        power_reference="min",
-        create_parquet=True
-    )
-
-    processor.print_summary()

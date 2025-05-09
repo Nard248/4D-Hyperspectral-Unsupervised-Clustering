@@ -1,0 +1,20 @@
+{
+  "n_clusters": 10,
+  "n_samples": 61833,
+  "unique_clusters": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "silhouette_score": 0.30152627125956505,
+  "davies_bouldin_score": 0.7424633467479318,
+  "calinski_harabasz_score": 106929.22013412172,
+  "spatial_coherence": 0.852793006970388
+}

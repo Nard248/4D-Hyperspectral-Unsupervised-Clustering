@@ -26,10 +26,10 @@ class HyperspectralViewer:
     def __init__(self, root):
         """Initialize the application interface."""
         self.root = root
-        self.root.title("Hyperspectral Data Viewer")
+        self.root.title("Hyperspectral Data-raw Viewer")
         self.root.geometry("1200x800")
 
-        # Data variables
+        # Data-raw variables
         self.data_dict = None
         self.file_path = None
         self.loader = None
@@ -58,7 +58,7 @@ class HyperspectralViewer:
         self.file_frame.pack(fill=tk.X, padx=5, pady=5)
 
         ttk.Button(self.file_frame, text="Open Pickle File", command=self.open_file).pack(fill=tk.X, padx=5, pady=2)
-        ttk.Button(self.file_frame, text="Show Data Structure", command=self.show_data_structure).pack(fill=tk.X, padx=5, pady=2)
+        ttk.Button(self.file_frame, text="Show Data-raw Structure", command=self.show_data_structure).pack(fill=tk.X, padx=5, pady=2)
 
         # Visualization controls
         self.viz_frame = ttk.LabelFrame(self.control_frame, text="Visualization")
@@ -335,7 +335,7 @@ class HyperspectralViewer:
         if self.loader:
             self.image_ax.set_title(f"Excitation: {self.current_excitation}nm")
         else:
-            self.image_ax.set_title(f"Data: {self.current_excitation}")
+            self.image_ax.set_title(f"Data-raw: {self.current_excitation}")
 
         # Update canvas
         self.image_canvas.draw()
@@ -523,7 +523,7 @@ class HyperspectralViewer:
 
         # Create a new window to display the structure
         structure_window = tk.Toplevel(self.root)
-        structure_window.title("Data Structure")
+        structure_window.title("Data-raw Structure")
         structure_window.geometry("800x600")
 
         # Add a text widget with scrollbars
@@ -543,7 +543,7 @@ class HyperspectralViewer:
         scrollbar_x.config(command=text.xview)
 
         # Print the structure to the text widget
-        text.insert(tk.END, "Data Structure:\n\n")
+        text.insert(tk.END, "Data-raw Structure:\n\n")
         self._print_structure_to_text(self.data_dict, text)
 
     def _print_structure_to_text(self, obj, text, prefix='', max_depth=4, current_depth=0):

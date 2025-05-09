@@ -1,3 +1,7 @@
+"""
+Hyperspectral data loader module for loading and visualizing 4D hyperspectral data.
+"""
+
 import numpy as np
 import os
 import glob
@@ -8,10 +12,11 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 from typing import Optional, Tuple, Dict, List, Union, Any
 import pickle
-from scipy import ndimage
-from sklearn.decomposition import PCA, FastICA, NMF
-import copy
 import warnings
+from sklearn.decomposition import PCA, FastICA, NMF
+
+from .hyperspectral_utils import load_data_from_pickle, save_data_to_pickle
+
 
 class HyperspectralDataLoader:
     """
@@ -36,8 +41,9 @@ class HyperspectralDataLoader:
             use_fiji: Whether to use ImageJ/Fiji for loading
             verbose: Whether to print loading progress
         """
-        self.data_path = data_path
-        self.metadata_path = metadata_path
+        # Convert paths to Path objects for better cross-platform compatibility
+        self.data_path = Path(data_path) if data_path else None
+        self.metadata_path = Path(metadata_path) if metadata_path else None
         self.cutoff_offset = cutoff_offset
         self.use_fiji = use_fiji
         self.verbose = verbose
@@ -73,7 +79,7 @@ class HyperspectralDataLoader:
         Load hyperspectral data from .im3 files.
 
         Args:
-            apply_cutoff: Whether to apply spectral cutoff to remove second-order scattering artifacts
+            apply_cutoff: Whether to apply spectral cutoff to remove artifacts
             pattern: File pattern for hyperspectral data files
             sheet_name: Sheet name or index in metadata Excel file
 
@@ -83,12 +89,10 @@ class HyperspectralDataLoader:
         if self.data_path is None:
             raise ValueError("data_path must be set")
 
-        data_path = Path(self.data_path)
-
         # --- Find all hyperspectral files ----------------------------------------------------
-        cube_paths = sorted(data_path.glob(pattern))
+        cube_paths = sorted(self.data_path.glob(pattern))
         if len(cube_paths) == 0:
-            raise FileNotFoundError(f"No files matching pattern '{pattern}' found in {data_path}")
+            raise FileNotFoundError(f"No files matching pattern '{pattern}' found in {self.data_path}")
 
         # --- Read Excel metadata (Excitation | Exposure) if available ------------------------
         exposure_lookup = {}
@@ -120,7 +124,7 @@ class HyperspectralDataLoader:
                     img = self._ij.io().open(str(cube_path))
                     cube = np.array(self._ij.py.from_java(img), dtype=float)
                 else:
-                    # Fallback loading method using numpy
+                    # Fallback loading method 
                     cube = self._load_im3_directly(str(cube_path))
 
                 # Determine emission wavelength range
@@ -175,7 +179,7 @@ class HyperspectralDataLoader:
     def _load_im3_directly(self, file_path: str) -> np.ndarray:
         """
         Load .im3 file directly without using ImageJ.
-        Attempt to parse the binary format.
+        This is a placeholder that needs to be implemented based on the .im3 format.
 
         Args:
             file_path: Path to the .im3 file
@@ -183,8 +187,6 @@ class HyperspectralDataLoader:
         Returns:
             Numpy array containing the data cube
         """
-        # This is a placeholder - you would need to implement the actual
-        # binary file parsing based on the .im3 format specification
         raise NotImplementedError(
             "Direct loading of .im3 files is not implemented. "
             "Please use ImageJ/Fiji for loading or provide your own loading method."
@@ -192,7 +194,7 @@ class HyperspectralDataLoader:
 
     def _process_data(self, apply_cutoff: bool = True) -> None:
         """
-        Process the raw data to apply spectral cutoff to remove second-order scattering artifacts.
+        Process the raw data to apply spectral cutoff.
 
         Args:
             apply_cutoff: Whether to apply spectral cutoff
@@ -230,9 +232,7 @@ class HyperspectralDataLoader:
     def apply_spectral_cutoff(self, data: np.ndarray, wavelengths: List[float],
                               excitation: float) -> Tuple[np.ndarray, List[float]]:
         """
-        Apply spectral cutoff to remove second-order scattering artifacts.
-        Filters emission spectra to remove wavelengths in the second-order scattering region
-        (2*excitation ± cutoff_offset).
+        Apply dual spectral cutoff (both Rayleigh and second-order) to remove artifacts.
 
         Args:
             data: Hyperspectral data cube (height, width, bands)
@@ -243,30 +243,34 @@ class HyperspectralDataLoader:
             filtered_data: Data after applying cutoff
             filtered_wavelengths: Wavelengths after applying cutoff
         """
-        # Convert wavelengths to numpy array if it's not already
+        # Convert wavelengths to numpy array
         wavelengths_arr = np.array(wavelengths)
 
         # Create a mask to keep valid wavelengths
         keep_mask = np.ones(len(wavelengths_arr), dtype=bool)
 
-        # Remove wavelengths in the second-order zone (2*excitation ± cutoff_offset)
+        # 1. Apply Rayleigh cutoff - remove wavelengths below (excitation + cutoff_offset)
+        rayleigh_cutoff = excitation + self.cutoff_offset
+        rayleigh_mask = wavelengths_arr >= rayleigh_cutoff
+        keep_mask = np.logical_and(keep_mask, rayleigh_mask)
+
+        # 2. Apply second-order cutoff - remove wavelengths in (2*excitation ± cutoff_offset)
         second_order_min = 2 * excitation - self.cutoff_offset
         second_order_max = 2 * excitation + self.cutoff_offset
         second_order_mask = np.logical_or(wavelengths_arr < second_order_min, wavelengths_arr > second_order_max)
         keep_mask = np.logical_and(keep_mask, second_order_mask)
 
-        # Apply the mask to the third dimension (emission wavelengths)
+        # Apply the combined mask to the third dimension (emission wavelengths)
         filtered_data = data[:, :, keep_mask]
         filtered_wavelengths = wavelengths_arr[keep_mask].tolist()
 
         if self.verbose:
-            print(f"Applied cutoff for excitation {excitation}nm")
-            print(f"Removed wavelengths between {second_order_min}nm and {second_order_max}nm")
+            print(f"Applied dual cutoff for excitation {excitation}nm")
+            print(f"Removed wavelengths below {rayleigh_cutoff}nm (Rayleigh cutoff)")
+            print(f"Removed wavelengths between {second_order_min}nm and {second_order_max}nm (second-order cutoff)")
             print(f"Original data shape: {data.shape}, filtered shape: {filtered_data.shape}")
 
         return filtered_data, filtered_wavelengths
-
-    # Method removed as reflectance cube concept is no longer needed
 
     def get_cube(self, excitation: float, processed: bool = True) -> Tuple[np.ndarray, List[float]]:
         """
@@ -310,59 +314,6 @@ class HyperspectralDataLoader:
         spectrum = cube[row, col, :]
 
         return spectrum, wavelengths
-
-    def get_excitation_spectrum(self, emission_idx: int, row: int, col: int,
-                                processed: bool = True) -> Tuple[np.ndarray, List[float]]:
-        """
-        Get excitation spectrum for a specific pixel and emission wavelength.
-
-        Args:
-            emission_idx: Index of emission wavelength relative to the filtered wavelengths
-            row, col: Pixel coordinates
-            processed: Whether to use processed or raw data
-
-        Returns:
-            Excitation spectrum and corresponding wavelengths
-        """
-        # Initialize arrays to store the spectrum
-        spectrum = []
-        ex_wavelengths = []
-
-        # Loop through all excitation wavelengths
-        for ex in self.excitation_wavelengths:
-            try:
-                cube, wavelengths = self.get_cube(ex, processed)
-
-                # Check if this emission index is valid for this cube
-                if emission_idx < cube.shape[0]:
-                    spectrum.append(cube[emission_idx, row, col])
-                    ex_wavelengths.append(ex)
-            except Exception:
-                continue
-
-        return np.array(spectrum), ex_wavelengths
-
-    def get_emission_wavelength_index(self, excitation: float,
-                                      emission_wavelength: float,
-                                      processed: bool = True) -> int:
-        """
-        Get the index of a specific emission wavelength for a given excitation.
-
-        Args:
-            excitation: Excitation wavelength
-            emission_wavelength: Target emission wavelength
-            processed: Whether to use processed or raw data
-
-        Returns:
-            Index of the closest emission wavelength
-        """
-        _, wavelengths = self.get_cube(excitation, processed)
-        wavelengths_arr = np.array(wavelengths)
-
-        # Find the closest wavelength
-        closest_idx = np.argmin(np.abs(wavelengths_arr - emission_wavelength))
-
-        return closest_idx
 
     def get_mean_spectrum(self, excitation: float = None, processed: bool = True,
                           region: Optional[Tuple[int, int, int, int]] = None) -> Tuple[np.ndarray, List[float]]:
@@ -505,8 +456,8 @@ class HyperspectralDataLoader:
         filtered_wavelengths = processed_data["wavelengths"]
 
         # Calculate mean spectra
-        full_mean = np.mean(full_data, axis=(1, 2))
-        filtered_mean = np.mean(filtered_data, axis=(1, 2))
+        full_mean = np.mean(full_data, axis=(0, 1))
+        filtered_mean = np.mean(filtered_data, axis=(0, 1))
 
         # Create figure showing cutoff
         fig, ax = plt.subplots(figsize=(12, 8))
@@ -514,11 +465,17 @@ class HyperspectralDataLoader:
         # Plot full spectrum with cutoff region highlighted
         ax.plot(full_wavelengths, full_mean, 'b-', label='Full Spectrum', linewidth=2)
 
-        # Highlight cutoff region
-        cutoff_wavelength = excitation + self.cutoff_offset
-        ax.axvspan(excitation - 5, cutoff_wavelength, color='r', alpha=0.2,
-                   label=f'Cutoff Region (Ex: {excitation}nm + {self.cutoff_offset}nm)')
-        ax.axvline(x=cutoff_wavelength, color='r', linestyle='--')
+        # Highlight Rayleigh cutoff region
+        rayleigh_cutoff = excitation + self.cutoff_offset
+        ax.axvspan(excitation - 5, rayleigh_cutoff, color='r', alpha=0.2,
+                   label=f'Rayleigh Cutoff Region (Ex: {excitation}nm + {self.cutoff_offset}nm)')
+        ax.axvline(x=rayleigh_cutoff, color='r', linestyle='--')
+
+        # Highlight second-order region
+        second_order_min = 2 * excitation - self.cutoff_offset
+        second_order_max = 2 * excitation + self.cutoff_offset
+        ax.axvspan(second_order_min, second_order_max, color='y', alpha=0.1,
+                   label=f'Second-Order Region (2×Ex ± {self.cutoff_offset}nm)')
 
         # Plot filtered spectrum
         ax.plot(filtered_wavelengths, filtered_mean, 'g-', linewidth=2, label='Filtered Spectrum')
@@ -532,14 +489,7 @@ class HyperspectralDataLoader:
         # Highlight excitation wavelength
         ax.axvline(x=excitation, color='orange', linestyle='-', label='Excitation Wavelength')
 
-        # Highlight second-order region
-        second_order_min = 2 * excitation - self.cutoff_offset
-        second_order_max = 2 * excitation + self.cutoff_offset
-        ax.axvspan(second_order_min, second_order_max, color='y', alpha=0.1,
-                   label=f'Second-Order Region (2×Ex ± {self.cutoff_offset}nm)')
-
         plt.tight_layout()
-
         return fig
 
     def visualize_image(self, excitation: float, emission_wavelength: Optional[float] = None,
@@ -571,7 +521,8 @@ class HyperspectralDataLoader:
             emission_idx = np.argmax(mean_spectrum)
         else:
             # Find the closest wavelength
-            emission_idx = self.get_emission_wavelength_index(excitation, emission_wavelength, processed)
+            wavelengths_arr = np.array(wavelengths)
+            emission_idx = np.argmin(np.abs(wavelengths_arr - emission_wavelength))
 
         # Extract the image for the selected emission wavelength
         image = cube[:, :, emission_idx]
@@ -711,25 +662,8 @@ class HyperspectralDataLoader:
         plt.tight_layout()
         return fig
 
-    def get_data_as_dataframe(self) -> pd.DataFrame:
-        """
-        Convert the data structure to a pandas DataFrame for easier analysis.
-
-        Returns:
-            DataFrame representation of the data
-        """
-        # Create a dictionary that will be converted to a DataFrame
-        df_data = {}
-
-        # Add each excitation wavelength data
-        for excitation_key, data_dict in self.data.items():
-            df_data[excitation_key] = data_dict['cube']
-
-        # Create a DataFrame
-        return pd.DataFrame(df_data)
-
     def get_features_for_ml(self, method: str = 'flatten', n_components: Optional[int] = None,
-                            excitation: Optional[float] = None) -> np.ndarray:
+                            excitation: Optional[float] = None, preserve_full_data: bool = False) -> np.ndarray:
         """
         Prepare features for machine learning models.
 
@@ -744,7 +678,9 @@ class HyperspectralDataLoader:
         if not self.data:
             raise ValueError("No data available. Load data first.")
 
-        # If specific excitation is provided, use only that
+        if preserve_full_data:
+            method = 'flatten'
+
         if excitation is not None:
             excitation_str = str(excitation)
             if excitation_str not in self.data:
@@ -785,23 +721,21 @@ class HyperspectralDataLoader:
                 raise ValueError(f"Unknown method: {method}. Try 'flatten', 'mean', 'max', or 'pca'.")
 
         else:
-            # Use all excitations - stack features from each excitation
             all_features = []
 
             for ex_str in self.excitation_wavelengths:
                 ex_str = str(ex_str)
                 if ex_str in self.data:
-                    # Get features for this excitation
                     ex_features = self.get_features_for_ml(method, n_components, float(ex_str))
                     all_features.append(ex_features)
 
-            # Stack all features side by side (assuming same spatial dimensions)
             features = np.hstack(all_features)
 
         return features
 
     def apply_dimensionality_reduction(self, method: str = 'pca', n_components: int = 10,
-                                       excitation: Optional[float] = None) -> Dict:
+                                       excitation: Optional[float] = None,
+                                       preserve_full_data: bool = False) -> Dict:
         """
         Apply dimensionality reduction to the hyperspectral data.
 
@@ -809,9 +743,10 @@ class HyperspectralDataLoader:
             method: Dimensionality reduction method ('pca', 'ica', 'nmf')
             n_components: Number of components to keep
             excitation: Specific excitation wavelength to use (if None, uses all)
+            preserve_full_data: If True, returns original data without reduction
 
         Returns:
-            Dictionary with reduced data and components
+            Dictionary with reduced data and components (or original data if preserve_full_data=True)
         """
         if not self.data:
             raise ValueError("No data available. Load data first.")
@@ -823,6 +758,15 @@ class HyperspectralDataLoader:
                 raise ValueError(f"No data found for excitation {excitation}")
 
             cube = self.data[excitation_str]['cube']
+
+            # If preserve_full_data is True, return the original data without reduction
+            if preserve_full_data:
+                return {
+                    'reduced_cube': cube,  # This is actually the full cube
+                    'components': None,  # No components when preserving full data
+                    'model': None,  # No model when preserving full data
+                    'original_data': True  # Flag to indicate this is original data
+                }
 
             # Reshape the cube for dimensionality reduction
             height, width, num_bands = cube.shape
@@ -857,29 +801,45 @@ class HyperspectralDataLoader:
                     'reduced_cube': reduced_cube,
                     'components': components,
                     'explained_variance': explained_variance,
-                    'model': model
+                    'model': model,
+                    'original_data': False
                 }
             else:
                 components = model.components_  # (n_components, bands)
                 return {
                     'reduced_cube': reduced_cube,
                     'components': components,
-                    'model': model
+                    'model': model,
+                    'original_data': False
                 }
 
         else:
             # Use all excitations
-            # We'll apply dim reduction to each excitation separately and return a list
+            # Apply dim reduction to each excitation separately and return a dictionary
             results = {}
 
-            for ex in self.excitation_wavelengths:
-                try:
-                    ex_result = self.apply_dimensionality_reduction(method, n_components, ex)
-                    results[str(ex)] = ex_result
-                except Exception as e:
-                    warnings.warn(f"Error reducing dimensionality for excitation {ex}: {str(e)}")
+            if preserve_full_data:
+                # If preserving full data, just collect original data for all excitations
+                for ex in self.excitation_wavelengths:
+                    ex_str = str(ex)
+                    if ex_str in self.data:
+                        results[ex_str] = {
+                            'reduced_cube': self.data[ex_str]['cube'],  # Full cube
+                            'components': None,
+                            'model': None,
+                            'original_data': True
+                        }
+                return results
+            else:
+                # Otherwise apply dimensionality reduction to each excitation
+                for ex in self.excitation_wavelengths:
+                    try:
+                        ex_result = self.apply_dimensionality_reduction(method, n_components, ex, preserve_full_data)
+                        results[str(ex)] = ex_result
+                    except Exception as e:
+                        warnings.warn(f"Error reducing dimensionality for excitation {ex}: {str(e)}")
 
-            return results
+                return results
 
     def save_to_pkl(self, output_file: str = 'hyperspectral_data.pkl') -> None:
         """
@@ -896,8 +856,7 @@ class HyperspectralDataLoader:
             'cutoff_offset': self.cutoff_offset
         }
 
-        with open(output_file, 'wb') as f:
-            pickle.dump(output_data, f)
+        save_data_to_pickle(output_data, output_file)
 
         if self.verbose:
             print(f"Data saved to {output_file}")
@@ -913,8 +872,7 @@ class HyperspectralDataLoader:
             Loaded data
         """
         try:
-            with open(input_file, 'rb') as f:
-                data = pickle.load(f)
+            data = load_data_from_pickle(input_file)
 
             # Update class attributes
             self.data = data.get('data', {})
@@ -972,7 +930,7 @@ class HyperspectralDataLoader:
         print(f"Number of excitation wavelengths: {summary['num_excitations']}")
         print(f"Excitation wavelengths: {summary['excitation_wavelengths']}")
         print(f"Processed date: {summary['processed_date']}")
-        print(f"Cutoff offset (for 2nd order scattering): {summary['cutoff_offset']} nm")
+        print(f"Cutoff offset: {summary['cutoff_offset']} nm")
 
         print("\nExcitation Details:")
         for ex, details in summary['excitation_details'].items():
@@ -980,514 +938,3 @@ class HyperspectralDataLoader:
             print(f"    Cube shape: {details['cube_shape']}")
             print(f"    Emission range: {details['emission_range']} nm")
             print(f"    Number of emission bands: {details['num_emission_bands']}")
-
-
-def create_excitation_emission_dataframe(data_dict: Dict,
-                                        sample_size: Optional[int] = None) -> pd.DataFrame:
-    """
-    Transform 4D hyperspectral data into a 2D dataframe.
-
-    Args:
-        data_dict: Dictionary containing hyperspectral data
-        sample_size: Optional number of random pixels to sample (for large datasets)
-
-    Returns:
-        DataFrame with x, y coordinates and intensity values for each valid excitation-emission combination
-    """
-    # First, collect all valid excitation-emission combinations
-    valid_combinations = []
-    all_excitations = []
-
-    # Check what excitations we actually have in the data
-    for ex_str in data_dict['data'].keys():
-        excitation = float(ex_str)
-        all_excitations.append(excitation)
-
-        # Get the valid emission wavelengths for this excitation
-        emissions = data_dict['data'][ex_str]['wavelengths']
-
-        # Add all valid combinations to our list
-        for emission in emissions:
-            col_name = f"{int(emission)}-{int(excitation)}"
-            valid_combinations.append((excitation, emission, col_name))
-
-    print(f"Found {len(all_excitations)} excitation wavelengths")
-    print(f"Generated {len(valid_combinations)} valid excitation-emission combinations")
-
-    # Create an empty dataframe with x, y coordinates
-    # First, determine the dimensions of our data
-    first_ex = str(all_excitations[0])
-    cube_shape = data_dict['data'][first_ex]['cube'].shape
-    height, width = cube_shape[0], cube_shape[1]
-
-    print(f"Image dimensions: {height} x {width} pixels")
-
-    # Initialize the dataframe with columns for x and y coordinates
-    total_pixels = height * width
-
-    # Create coordinate arrays - this is the correct way to flatten spatial dimensions
-    # Create a meshgrid of coordinates
-    y_coords, x_coords = np.mgrid[0:height, 0:width]
-
-    # Flatten the coordinates
-    x_coords = x_coords.flatten()
-    y_coords = y_coords.flatten()
-
-    # Create initial dataframe with coordinates
-    df = pd.DataFrame({
-        'x': x_coords,
-        'y': y_coords
-    })
-
-    # If sample_size is provided, take a random sample of pixels
-    if sample_size is not None and sample_size < len(df):
-        df = df.sample(n=sample_size, random_state=42)
-        print(f"Sampled {sample_size} pixels out of {total_pixels}")
-
-    print(f"Created initial dataframe with {len(df)} rows")
-
-    # Now, fill in the intensity values for each valid combination
-    for excitation, emission, col_name in valid_combinations:
-        # Get the data cube for this excitation
-        ex_str = str(excitation)
-        cube = data_dict['data'][ex_str]['cube']
-        wavelengths = data_dict['data'][ex_str]['wavelengths']
-
-        # Find the index of this emission wavelength
-        try:
-            em_idx = wavelengths.index(emission)
-
-            # Extract the intensity values for this emission wavelength
-            # For the sampled rows only
-            if sample_size is not None and sample_size < total_pixels:
-                # Get the x, y coordinates of the sampled pixels
-                sampled_coords = df[['x', 'y']].values
-                # Extract intensity values for these coordinates
-                intensities = [cube[y, x, em_idx] for x, y in zip(sampled_coords[:, 0], sampled_coords[:, 1])]
-                df[col_name] = intensities
-            else:
-                # Extract for all pixels - flatten in the same order as the coordinates
-                intensities = cube[:, :, em_idx].flatten()
-                df[col_name] = intensities
-
-        except ValueError:
-            # This emission wavelength doesn't exist for this excitation
-            # We're skipping it as requested instead of adding NaN values
-            continue
-
-    print(f"Final dataframe has {len(df.columns)} columns")
-    return df
-
-def load_data_and_create_df(pickle_file: str, sample_size: Optional[int] = None) -> pd.DataFrame:
-    """
-    Load data from pickle file and create the dataframe
-
-    Args:
-        pickle_file: Path to the pickle file
-        sample_size: Optional number of random pixels to sample
-
-    Returns:
-        Transformed dataframe
-    """
-    # Load the data
-    with open(pickle_file, 'rb') as f:
-        data_dict = pickle.load(f)
-
-    # Create the dataframe
-    return create_excitation_emission_dataframe(data_dict, sample_size)
-
-def save_dataframe(df: pd.DataFrame, output_file: str) -> None:
-    """Save the dataframe to a file"""
-    print(f"Saving dataframe to {output_file}")
-
-    # Determine file extension and save accordingly
-    ext = Path(output_file).suffix
-    if ext == '.csv':
-        df.to_csv(output_file, index=False)
-    elif ext == '.parquet':
-        df.to_parquet(output_file, index=False)
-    elif ext == '.pkl' or ext == '.pickle':
-        df.to_pickle(output_file)
-    else:
-        print(f"Unrecognized extension {ext}, saving as pickle")
-        df.to_pickle(output_file)
-
-    print(f"Saved dataframe with {len(df)} rows and {len(df.columns)} columns")
-
-def normalize_hyperspectral_data(
-    data_dict: Dict,
-    reference_type: str = 'min',
-    output_file: Optional[str] = None
-) -> Dict:
-    """
-    Normalize hyperspectral data based on exposure time.
-
-    Args:
-        data_dict: Dictionary containing hyperspectral data with exposure time in metadata
-        reference_type: Type of reference exposure time ('min', 'max', or float value)
-        output_file: Path to save the normalized data pickle file (optional)
-
-    Returns:
-        Dictionary containing normalized hyperspectral data
-    """
-    print(f"Normalizing hyperspectral data using {reference_type} exposure as reference...")
-
-    # Create a deep copy of the data to avoid modifying the original
-    normalized_data = copy.deepcopy(data_dict)
-
-    # Extract exposure times for each excitation wavelength
-    exposure_times = {}
-
-    for ex_str in data_dict['data'].keys():
-        # Try to get exposure time from different possible locations in the data structure
-        if 'raw' in data_dict['data'][ex_str] and 'expos_val' in data_dict['data'][ex_str]['raw']:
-            exposure_times[ex_str] = data_dict['data'][ex_str]['raw']['expos_val']
-        elif 'expos_val' in data_dict['data'][ex_str]:
-            exposure_times[ex_str] = data_dict['data'][ex_str]['expos_val']
-
-    if not exposure_times:
-        raise ValueError("Could not find exposure time information in the data")
-
-    print(f"Found exposure times for {len(exposure_times)} excitation wavelengths")
-
-    # Determine the reference exposure time
-    if reference_type == 'min':
-        reference_exposure = min(exposure_times.values())
-        print(f"Using minimum exposure time as reference: {reference_exposure}")
-    elif reference_type == 'max':
-        reference_exposure = max(exposure_times.values())
-        print(f"Using maximum exposure time as reference: {reference_exposure}")
-    elif isinstance(reference_type, (int, float)):
-        reference_exposure = float(reference_type)
-        print(f"Using provided exposure time as reference: {reference_exposure}")
-    else:
-        raise ValueError("Invalid reference_type. Use 'min', 'max', or a float value.")
-
-    # Store the normalization information in metadata
-    if 'metadata' not in normalized_data:
-        normalized_data['metadata'] = {}
-
-    normalized_data['metadata']['normalization'] = {
-        'reference_type': reference_type,
-        'reference_exposure': reference_exposure,
-        'original_exposures': exposure_times
-    }
-
-    # Normalize each data cube
-    print("Normalizing data cubes...")
-    for ex_str, exposure in exposure_times.items():
-        # Calculate normalization factor: E₁/E₂
-        normalization_factor = reference_exposure / exposure
-
-        # Apply normalization to the data cube
-        original_cube = data_dict['data'][ex_str]['cube']
-
-        # Normalize: I_ij^norm = I_ij × (E₁/E₂)
-        normalized_data['data'][ex_str]['cube'] = original_cube * normalization_factor
-
-        # Store normalization factor in metadata
-        normalized_data['data'][ex_str]['normalization_factor'] = normalization_factor
-
-        print(f"  Normalized excitation {ex_str}nm (Exposure: {exposure}, Factor: {normalization_factor:.4f})")
-
-    # Save the normalized data if output file is provided
-    if output_file:
-        with open(output_file, 'wb') as f:
-            pickle.dump(normalized_data, f)
-        print(f"Normalized data saved to {output_file}")
-
-    return normalized_data
-
-def print_exposure_info(data_dict: Dict) -> None:
-    """
-    Print exposure time information from the data dictionary.
-
-    Args:
-        data_dict: Dictionary containing hyperspectral data
-    """
-    print("\nExposure Time Information:")
-
-    exposure_times = {}
-
-    for ex_str in data_dict['data'].keys():
-        # Try to get exposure time from different possible locations
-        if 'raw' in data_dict['data'][ex_str] and 'expos_val' in data_dict['data'][ex_str]['raw']:
-            exposure_times[ex_str] = data_dict['data'][ex_str]['raw']['expos_val']
-        elif 'expos_val' in data_dict['data'][ex_str]:
-            exposure_times[ex_str] = data_dict['data'][ex_str]['expos_val']
-
-    if not exposure_times:
-        print("No exposure time information found in the data")
-        return
-
-    # Convert to sorted list of tuples
-    sorted_exposures = sorted([(float(ex), exp) for ex, exp in exposure_times.items()])
-
-    print(f"{'Excitation (nm)':<15} {'Exposure Time':<15}")
-    print("-" * 30)
-
-    for ex, exp in sorted_exposures:
-        print(f"{ex:<15.1f} {exp:<15}")
-
-    print("\nSummary:")
-    print(f"Minimum exposure: {min(exposure_times.values())}")
-    print(f"Maximum exposure: {max(exposure_times.values())}")
-    print(f"Ratio max/min: {max(exposure_times.values()) / min(exposure_times.values()):.2f}")
-
-def normalize_and_save_both_versions(
-    input_file: str,
-    output_dir: Optional[str] = None
-) -> Tuple[Path, Path]:
-    """
-    Load data, normalize it using both min and max exposure times, and save both versions.
-
-    Args:
-        input_file: Path to the input pickle file
-        output_dir: Directory to save the output files (default: same as input file)
-
-    Returns:
-        Tuple of (up_normalized_data, down_normalized_data)
-    """
-    # Load the data
-    print(f"Loading data from {input_file}...")
-    with open(input_file, 'rb') as f:
-        data_dict = pickle.load(f)
-
-    # Print exposure information
-    print_exposure_info(data_dict)
-
-    # Set up output directory
-    input_path = Path(input_file)
-    if output_dir is None:
-        output_dir = input_path.parent
-    else:
-        output_dir = Path(output_dir)
-        output_dir.mkdir(parents=True, exist_ok=True)
-
-    # Create output file names
-    base_name = input_path.stem
-    up_output_file = output_dir / f"{base_name}_normalized_exposure_up.pkl"
-    down_output_file = output_dir / f"{base_name}_normalized_exposure_down.pkl"
-
-    # Normalize up (using max exposure as reference)
-    up_normalized_data = normalize_hyperspectral_data(
-        data_dict,
-        reference_type='max',
-        output_file=str(up_output_file)
-    )
-
-    # Normalize down (using min exposure as reference)
-    down_normalized_data = normalize_hyperspectral_data(
-        data_dict,
-        reference_type='min',
-        output_file=str(down_output_file)
-    )
-
-    print("\nNormalization complete!")
-    print(f"Up-normalized data (max exposure reference) saved to: {up_output_file}")
-    print(f"Down-normalized data (min exposure reference) saved to: {down_output_file}")
-
-    return up_output_file, down_output_file
-
-
-def load_masked_data_and_create_df(pickle_file: str, sample_size: Optional[int] = None) -> pd.DataFrame:
-    """
-    Load hyperspectral data from pickle file and create a dataframe,
-    excluding masked pixels (indicated by NaN values).
-
-    Args:
-        pickle_file: Path to the pickle file
-        sample_size: Optional number of random pixels to sample from non-masked pixels
-
-    Returns:
-        Transformed dataframe with masked pixels excluded
-    """
-    # Load the data
-    with open(pickle_file, 'rb') as f:
-        data_dict = pickle.load(f)
-
-    # Create the dataframe excluding masked pixels
-    return create_masked_excitation_emission_dataframe(data_dict, sample_size)
-
-
-def create_masked_excitation_emission_dataframe(data_dict: Dict,
-                                                sample_size: Optional[int] = None) -> pd.DataFrame:
-    """
-    Transform 4D hyperspectral data into a 2D dataframe, excluding masked pixels (NaN values).
-
-    Args:
-        data_dict: Dictionary containing hyperspectral data
-        sample_size: Optional number of random pixels to sample from non-masked pixels
-
-    Returns:
-        DataFrame with x, y coordinates and intensity values for non-masked pixels
-    """
-    # First, collect all valid excitation-emission combinations
-    valid_combinations = []
-    all_excitations = []
-
-    # Check what excitations we actually have in the data
-    for ex_str in data_dict['data'].keys():
-        excitation = float(ex_str)
-        all_excitations.append(excitation)
-
-        # Get the valid emission wavelengths for this excitation
-        emissions = data_dict['data'][ex_str]['wavelengths']
-
-        # Add all valid combinations to our list
-        for emission in emissions:
-            col_name = f"{int(emission)}-{int(excitation)}"
-            valid_combinations.append((excitation, emission, col_name))
-
-    print(f"Found {len(all_excitations)} excitation wavelengths")
-    print(f"Generated {len(valid_combinations)} valid excitation-emission combinations")
-
-    # Create an empty dataframe with x, y coordinates
-    # First, determine the dimensions of our data
-    first_ex = str(all_excitations[0])
-    cube_shape = data_dict['data'][first_ex]['cube'].shape
-    height, width = cube_shape[0], cube_shape[1]
-
-    print(f"Image dimensions: {height} x {width} pixels")
-
-    # Create coordinate arrays - using the same approach as in your original code
-    y_coords, x_coords = np.mgrid[0:height, 0:width]
-
-    # Flatten the coordinates
-    flat_x_coords = x_coords.flatten()
-    flat_y_coords = y_coords.flatten()
-
-    # Create a mask to identify non-NaN pixels (pixels to keep)
-    # We'll use the first wavelength of the first excitation to determine masked pixels
-    first_cube = data_dict['data'][first_ex]['cube']
-    first_band = first_cube[:, :, 0]  # Use the first band to determine mask
-    valid_mask = ~np.isnan(first_band)  # NaN values indicate masked pixels
-
-    # Check if any masking has been applied
-    if not np.any(np.isnan(first_band)):
-        print("No masked pixels detected (no NaN values found)")
-    else:
-        # Flatten the mask and filter coordinates
-        flat_mask = valid_mask.flatten()
-        flat_x_coords = flat_x_coords[flat_mask]
-        flat_y_coords = flat_y_coords[flat_mask]
-
-        print(f"Identified {np.sum(~valid_mask)} masked pixels, keeping {np.sum(valid_mask)} pixels")
-
-    # Create initial dataframe with filtered coordinates
-    df = pd.DataFrame({
-        'x': flat_x_coords,
-        'y': flat_y_coords
-    })
-
-    # If sample_size is provided, take a random sample of pixels
-    if sample_size is not None and sample_size < len(df):
-        df = df.sample(n=sample_size, random_state=42)
-        print(f"Sampled {sample_size} pixels out of {len(df.index)} non-masked pixels")
-
-    print(f"Created initial dataframe with {len(df)} rows")
-
-    # Now, fill in the intensity values for each valid combination
-    for excitation, emission, col_name in valid_combinations:
-        # Get the data cube for this excitation
-        ex_str = str(excitation)
-        cube = data_dict['data'][ex_str]['cube']
-        wavelengths = data_dict['data'][ex_str]['wavelengths']
-
-        # Find the index of this emission wavelength
-        try:
-            em_idx = wavelengths.index(emission)
-
-            # Extract the intensity values for these coordinates - vectorized approach
-            # Convert coordinates to integers and make sure they're within bounds
-            y_indices = df['y'].astype(int).values
-            x_indices = df['x'].astype(int).values
-
-            # Get the intensities for these coordinates at the specified emission wavelength
-            df[col_name] = cube[y_indices, x_indices, em_idx]
-
-        except ValueError:
-            # This emission wavelength doesn't exist for this excitation
-            # Skip it instead of adding NaN values
-            continue
-
-    print(f"Final dataframe has {len(df.columns)} columns")
-    return df
-
-
-def normalize_and_save_masked_versions(
-        input_file: str,
-        output_dir: Optional[str] = None,
-        sample_size: Optional[int] = None
-) -> Tuple[Path, Path]:
-    """
-    Load masked data, normalize it using both min and max exposure times,
-    and save both versions as parquet files, excluding masked pixels.
-
-    Args:
-        input_file: Path to the input pickle file
-        output_dir: Directory to save the output files (default: same as input file)
-        sample_size: Optional number of random pixels to sample from non-masked pixels
-
-    Returns:
-        Tuple of (up_normalized_parquet_path, down_normalized_parquet_path)
-    """
-    # Load the data
-    print(f"Loading data from {input_file}...")
-    with open(input_file, 'rb') as f:
-        data_dict = pickle.load(f)
-
-    # Print exposure information
-    print_exposure_info(data_dict)
-
-    # Set up output directory
-    input_path = Path(input_file)
-    if output_dir is None:
-        output_dir = input_path.parent
-    else:
-        output_dir = Path(output_dir)
-        output_dir.mkdir(parents=True, exist_ok=True)
-
-    # Create output file names
-    base_name = input_path.stem
-    up_output_pickle = output_dir / f"{base_name}_normalized_exposure_up.pkl"
-    down_output_pickle = output_dir / f"{base_name}_normalized_exposure_down.pkl"
-    up_output_parquet = output_dir / f"{base_name}_normalized_exposure_up.parquet"
-    down_output_parquet = output_dir / f"{base_name}_normalized_exposure_down.parquet"
-
-    # Normalize up (using max exposure as reference)
-    up_normalized_data = normalize_hyperspectral_data(
-        data_dict,
-        reference_type='max',
-        output_file=str(up_output_pickle)
-    )
-
-    # Normalize down (using min exposure as reference)
-    down_normalized_data = normalize_hyperspectral_data(
-        data_dict,
-        reference_type='min',
-        output_file=str(down_output_pickle)
-    )
-
-    print("\nNormalization complete!")
-    print(f"Up-normalized data (max exposure reference) saved to: {up_output_pickle}")
-    print(f"Down-normalized data (min exposure reference) saved to: {down_output_pickle}")
-
-    # Create and save dataframes (excluding masked pixels)
-    print("\nCreating dataframes with masked pixels excluded...")
-
-    # Process up-normalized data
-    print("\nProcessing up-normalized data...")
-    df_up = create_masked_excitation_emission_dataframe(up_normalized_data, sample_size)
-    save_dataframe(df_up, str(up_output_parquet))
-
-    # Process down-normalized data
-    print("\nProcessing down-normalized data...")
-    df_down = create_masked_excitation_emission_dataframe(down_normalized_data, sample_size)
-    save_dataframe(df_down, str(down_output_parquet))
-
-    print(f"\nSaved filtered dataframes to:")
-    print(f"Up-normalized: {up_output_parquet}")
-    print(f"Down-normalized: {down_output_parquet}")
-
-    return up_output_parquet, down_output_parquet

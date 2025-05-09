@@ -21,10 +21,10 @@ class HyperspectralMaskingApp:
     def __init__(self, root):
         """Initialize the application interface."""
         self.root = root
-        self.root.title("Hyperspectral Data Masking Tool")
+        self.root.title("Hyperspectral Data-raw Masking Tool")
         self.root.geometry("1200x700")
 
-        # Data variables
+        # Data-raw variables
         self.data_dict = None
         self.file_path = None
         self.rgb_image = None
@@ -267,7 +267,7 @@ class HyperspectralMaskingApp:
             self.file_path = file_path
 
             # Print structure for debugging
-            print(f"Data structure of {os.path.basename(file_path)}:")
+            print(f"Data-raw structure of {os.path.basename(file_path)}:")
             self._print_nested_structure(self.data_dict)
 
             # Find data cubes in the structure
@@ -1079,7 +1079,7 @@ class HyperspectralMaskingApp:
             Dictionary with masked hyperspectral data
         """
         if not self.data_dict:
-            raise ValueError("Data not loaded")
+            raise ValueError("Data-raw not loaded")
 
         if self.mask is None:
             raise ValueError("Mask not created")
