@@ -451,7 +451,6 @@ class HyperspectralProcessor:
         if self.laser_power_excel is None:
             raise ValueError("laser_power_excel must be set")
 
-        # Create output directory
         if output_dir is None:
             output_dir = Path("processed_data")
         else:
@@ -459,12 +458,10 @@ class HyperspectralProcessor:
 
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        # Generate output file names
         cutoff_file = output_dir / f"data_dual_cutoff_{self.cutoff_offset}nm.pkl"
         exposure_norm_file = output_dir / f"data_cutoff_{self.cutoff_offset}nm_exposure_{exposure_reference}.pkl"
         power_norm_file = output_dir / f"data_cutoff_{self.cutoff_offset}nm_exposure_{exposure_reference}_power_{power_reference}.pkl"
 
-        # Step 1: Load data with dual cutoff
         print(f"\n=== Step 1: Loading data with dual cutoff (offset: {self.cutoff_offset}nm) ===")
         self.load_data(apply_cutoff=True)
 
