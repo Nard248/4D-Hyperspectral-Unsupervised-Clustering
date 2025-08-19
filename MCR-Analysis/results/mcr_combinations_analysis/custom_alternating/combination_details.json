@@ -1,0 +1,39 @@
+{
+  "combination_name": "custom_alternating",
+  "excitations_in_combination": [
+    "450.0",
+    "510.0",
+    "570.0"
+  ],
+  "n_components": 4,
+  "explained_variance": 0.9765402248948037,
+  "reconstruction_error": 7703.325329603714,
+  "excitations_used": [
+    "450.0"
+  ],
+  "concentration_stats": {
+    "shape": [
+      256,
+      348,
+      4
+    ],
+    "component_means": [
+      503.834476084968,
+      602.038560747496,
+      995.4274098029343,
+      740.9723256795027
+    ],
+    "component_stds": [
+      541.5901593213173,
+      550.3897549026551,
+      858.7314500762176,
+      1142.1956185460126
+    ],
+    "component_maxes": [
+      6500.184316946875,
+      5348.587908766766,
+      7681.681212372206,
+      23317.926188730038
+    ]
+  }
+}

@@ -1,0 +1,45 @@
+Best Performing MCR Combinations
+========================================
+
+Top 5 Combinations (by Explained Variance):
+----------------------------------------
+1. single_350.0
+   Excitations: ['350.0']
+   Explained Variance: 0.9642
+   Reconstruction Error: 157.452629
+
+2. single_340.0
+   Excitations: ['340.0']
+   Explained Variance: 0.9626
+   Reconstruction Error: 217.106344
+
+3. single_330.0
+   Excitations: ['330.0']
+   Explained Variance: 0.9560
+   Reconstruction Error: 322.451938
+
+4. single_320.0
+   Excitations: ['320.0']
+   Explained Variance: 0.9463
+   Reconstruction Error: 464.519155
+
+5. single_310.0
+   Excitations: ['310.0']
+   Explained Variance: 0.9365
+   Reconstruction Error: 652.022340
+
+
+Best Combination by Number of Excitations:
+----------------------------------------
+Best with 1 excitation(s): single_350.0
+   Excitations: ['350.0']
+   Explained Variance: 0.9642
+
+Best with 2 excitation(s): custom_specific_pair
+   Excitations: ['480.0', '540.0']
+   Explained Variance: 0.9747
+
+Best with 3 excitation(s): triplet_300.0_320.0_350.0
+   Excitations: ['300.0', '320.0', '350.0']
+   Explained Variance: nan
+

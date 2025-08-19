@@ -1,0 +1,41 @@
+{
+  "combination_name": "triplet_330.0_340.0_350.0",
+  "excitations_in_combination": [
+    "330.0",
+    "340.0",
+    "350.0"
+  ],
+  "n_components": 4,
+  "explained_variance": NaN,
+  "reconstruction_error": NaN,
+  "excitations_used": [
+    "330.0",
+    "340.0",
+    "350.0"
+  ],
+  "concentration_stats": {
+    "shape": [
+      256,
+      348,
+      4
+    ],
+    "component_means": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "component_stds": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "component_maxes": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ]
+  }
+}
