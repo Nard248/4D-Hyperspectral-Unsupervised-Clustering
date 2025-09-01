@@ -172,3 +172,6 @@ cython_debug/
 *.xlsx
 *.csv
 *.parquet
+*.tiff
+*.txt
+*.json

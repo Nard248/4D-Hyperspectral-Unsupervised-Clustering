@@ -15,6 +15,7 @@ from .clustering import extract_encoded_features, optimize_kmeans_clustering, ru
 from .visualization import (create_rgb_visualization, visualize_reconstruction_comparison, overlay_clusters_on_rgb,
                             overlay_clusters_with_consistent_colors, visualize_4d_cluster_profiles_consistent)
 from .workflow import complete_hyperspectral_workflow
+from .wavelength_selector import WavelengthSelector, select_informative_wavelengths
 
 __all__ = [
     # Dataset classes
@@ -38,5 +39,8 @@ __all__ = [
     'overlay_clusters_on_rgb',
     'overlay_clusters_with_consistent_colors', 'visualize_4d_cluster_profiles_consistent',
     # Full workflow
-    'complete_hyperspectral_workflow'
+    'complete_hyperspectral_workflow',
+
+    # Wavelength selector
+    'WavelengthSelector', 'select_informative_wavelengths'
 ]
