@@ -89,6 +89,10 @@ class WavelengthAnalyzer:
             self.model = self.model.to(self.device)
             print(f"✓ Dataset loaded: {len(self.dataset.excitation_wavelengths)} excitations")
             print(f"✓ Model loaded and moved to {self.device}")
+        except FileNotFoundError as e:
+            print(f"\n⚠ Model file not found: {self.config.model_path}")
+            print(f"Training a new model from scratch...")
+            self._train_compatible_model()
         except RuntimeError as e:
             if "Missing key(s)" in str(e) or "size mismatch" in str(e):
                 print(f"\n⚠ WARNING: Model wavelengths don't match data wavelengths!")
