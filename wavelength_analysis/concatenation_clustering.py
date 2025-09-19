@@ -47,138 +47,176 @@ def load_masked_data(file_path: Union[str, Path]) -> Dict:
     return data
 
 
-def concatenate_hyperspectral_data(
+def concatenate_hyperspectral_data_improved(
     data_dict: Dict,
-    normalize: bool = True,
-    scale: bool = True
+    global_normalize: bool = True,
+    normalization_method: str = 'global_percentile'
 ) -> Tuple[pd.DataFrame, np.ndarray, Dict]:
     """
-    Concatenate hyperspectral data from multiple excitation wavelengths into a single DataFrame.
-    Each row represents a pixel with its (x, y) coordinates and intensity values for all
-    excitation-emission combinations.
-    
+    Improved concatenation of hyperspectral data with proper coordinate handling.
+    Only processes valid pixels and applies global normalization to spectral features.
+
     Args:
         data_dict: Dictionary containing hyperspectral data
-        normalize: Whether to normalize intensities per excitation wavelength
-        scale: Whether to apply standard scaling to features
-        
+        global_normalize: Whether to apply global normalization to spectral features
+        normalization_method: 'global_percentile', 'global_minmax', 'global_standard', or 'none'
+
     Returns:
         Tuple of (concatenated_df, valid_mask, metadata)
     """
-    print("Starting data concatenation...")
-    
+    print("Starting improved data concatenation...")
+
     # Extract data and metadata
     if 'data' in data_dict:
         excitation_data = data_dict['data']
     else:
         excitation_data = data_dict
-    
+
     # Get excitation wavelengths
     if 'excitation_wavelengths' in data_dict:
         excitation_wavelengths = data_dict['excitation_wavelengths']
     else:
         excitation_wavelengths = sorted([float(k) for k in excitation_data.keys() if k != 'metadata'])
-    
+
     print(f"Found {len(excitation_wavelengths)} excitation wavelengths: {excitation_wavelengths}")
-    
+
     # Get spatial dimensions from first excitation
     first_ex = str(excitation_wavelengths[0])
     first_cube = excitation_data[first_ex]['cube']
     height, width = first_cube.shape[:2]
-    
+
     print(f"Spatial dimensions: {height} x {width}")
-    
-    # Create coordinate grids
-    x_coords, y_coords = np.meshgrid(np.arange(width), np.arange(height))
-    x_coords = x_coords.flatten()
-    y_coords = y_coords.flatten()
-    
+
     # Find valid (non-masked) pixels across all excitations
     print("Finding valid pixels...")
-    valid_mask = np.ones(height * width, dtype=bool)
-    
+    valid_mask_flat = np.ones(height * width, dtype=bool)
+
     for ex in excitation_wavelengths:
         ex_str = str(ex)
         cube = excitation_data[ex_str]['cube']
-        
+
         # Check for NaN or masked values
         cube_flat = cube.reshape(-1, cube.shape[-1])
-        
+
         # A pixel is invalid if all emissions are NaN for this excitation
         invalid_pixels = np.all(np.isnan(cube_flat), axis=1)
-        valid_mask &= ~invalid_pixels
-    
-    n_valid = np.sum(valid_mask)
+        valid_mask_flat &= ~invalid_pixels
+
+    n_valid = np.sum(valid_mask_flat)
     print(f"Found {n_valid} valid pixels out of {height * width} total ({100 * n_valid / (height * width):.1f}%)")
-    
-    # Build column names and concatenated data
-    columns = ['x', 'y']
-    data_list = []
-    
-    # Add coordinates for valid pixels
-    data_list.append(x_coords[valid_mask])
-    data_list.append(y_coords[valid_mask])
-    
-    print("Concatenating spectral data...")
+
+    # Get coordinates for valid pixels only (keep as integers)
+    y_coords, x_coords = np.where(valid_mask_flat.reshape(height, width))
+
+    print(f"Valid pixel coordinates range: x[{x_coords.min()}-{x_coords.max()}], y[{y_coords.min()}-{y_coords.max()}]")
+
+    # Build spectral data for valid pixels only
+    print("Extracting spectral data for valid pixels...")
+    spectral_data_list = []
+    column_names = []
+
     for ex in excitation_wavelengths:
         ex_str = str(ex)
         cube = excitation_data[ex_str]['cube']
         wavelengths = excitation_data[ex_str]['wavelengths']
-        
-        # Reshape cube to (n_pixels, n_emissions)
-        cube_flat = cube.reshape(-1, cube.shape[-1])
-        
-        # Extract valid pixels
-        valid_data = cube_flat[valid_mask]
-        
-        # Replace any remaining NaNs with 0
-        valid_data = np.nan_to_num(valid_data, 0)
-        
-        # Normalize if requested
-        if normalize:
-            # Normalize each emission band to [0, 1]
-            for i in range(valid_data.shape[1]):
-                band_data = valid_data[:, i]
-                if np.max(band_data) > 0:
-                    valid_data[:, i] = band_data / np.max(band_data)
-        
-        # Add to data list
+
+        # Extract data only for valid pixels
         for i, em in enumerate(wavelengths):
             column_name = f"ex_{ex:.0f}_em_{em:.0f}"
-            columns.append(column_name)
-            data_list.append(valid_data[:, i])
-    
-    # Create DataFrame
-    df = pd.DataFrame(np.column_stack(data_list), columns=columns)
-    
+            column_names.append(column_name)
+
+            # Extract emission data for valid pixels
+            emission_data = cube[y_coords, x_coords, i]
+            # Replace any remaining NaNs with 0
+            emission_data = np.nan_to_num(emission_data, 0)
+            spectral_data_list.append(emission_data)
+
+    # Stack all spectral data
+    spectral_data = np.column_stack(spectral_data_list)
+    print(f"Extracted spectral data shape: {spectral_data.shape}")
+
+    # Apply global normalization to ALL spectral values if requested
+    if global_normalize:
+        print(f"Applying global normalization using method: {normalization_method}")
+
+        if normalization_method == 'global_percentile':
+            # Use percentiles to handle outliers
+            p5 = np.percentile(spectral_data[spectral_data > 0], 5) if np.any(spectral_data > 0) else 0
+            p95 = np.percentile(spectral_data[spectral_data > 0], 95) if np.any(spectral_data > 0) else 1
+            spectral_data = np.clip((spectral_data - p5) / (p95 - p5 + 1e-10), 0, 1)
+            print(f"  Used percentiles: P5={p5:.2f}, P95={p95:.2f}")
+
+        elif normalization_method == 'global_minmax':
+            # Global min-max scaling
+            data_min = np.min(spectral_data)
+            data_max = np.max(spectral_data)
+            spectral_data = (spectral_data - data_min) / (data_max - data_min + 1e-10)
+            print(f"  Global range: [{data_min:.2f}, {data_max:.2f}]")
+
+        elif normalization_method == 'global_standard':
+            # Global standardization
+            data_mean = np.mean(spectral_data)
+            data_std = np.std(spectral_data)
+            spectral_data = (spectral_data - data_mean) / (data_std + 1e-10)
+            print(f"  Global statistics: mean={data_mean:.2f}, std={data_std:.2f}")
+
+        else:  # 'none'
+            print("  No normalization applied")
+
+    # Create DataFrame with integer coordinates and normalized spectral data
+    df_data = {
+        'x': x_coords.astype(int),  # Keep as integers
+        'y': y_coords.astype(int),  # Keep as integers
+    }
+
+    # Add spectral columns
+    for i, col_name in enumerate(column_names):
+        df_data[col_name] = spectral_data[:, i]
+
+    df = pd.DataFrame(df_data)
+
     print(f"Created DataFrame with shape: {df.shape}")
-    print(f"  - {n_valid} pixels (rows)")
-    print(f"  - {len(columns)} features (columns): 2 coordinates + {len(columns) - 2} spectral features")
-    
-    # Apply standard scaling if requested
-    if scale:
-        print("Applying standard scaling to spectral features...")
-        scaler = StandardScaler()
-        spectral_columns = [col for col in columns if col not in ['x', 'y']]
-        df[spectral_columns] = scaler.fit_transform(df[spectral_columns])
-    
+    print(f"  - {n_valid} valid pixels (rows)")
+    print(f"  - {len(df.columns)} features (columns): 2 integer coordinates + {len(column_names)} spectral features")
+    print(f"  - Coordinate types: x={df['x'].dtype}, y={df['y'].dtype}")
+    print(f"  - Spectral data range: [{spectral_data.min():.4f}, {spectral_data.max():.4f}]")
+
     # Create metadata
     metadata = {
         'height': height,
         'width': width,
         'excitation_wavelengths': excitation_wavelengths,
         'n_valid_pixels': n_valid,
-        'normalized': normalize,
-        'scaled': scale
+        'n_total_pixels': height * width,
+        'global_normalized': global_normalize,
+        'normalization_method': normalization_method if global_normalize else 'none'
     }
-    
+
     # Store emission wavelengths per excitation
     metadata['emission_wavelengths'] = {}
     for ex in excitation_wavelengths:
         ex_str = str(ex)
         metadata['emission_wavelengths'][ex] = excitation_data[ex_str]['wavelengths']
-    
-    return df, valid_mask.reshape(height, width), metadata
+
+    return df, valid_mask_flat.reshape(height, width), metadata
+
+
+# Keep the old function for backward compatibility
+def concatenate_hyperspectral_data(
+    data_dict: Dict,
+    normalize: bool = True,
+    scale: bool = True
+) -> Tuple[pd.DataFrame, np.ndarray, Dict]:
+    """
+    DEPRECATED: Use concatenate_hyperspectral_data_improved() instead.
+    This function has issues with coordinate normalization and inefficient processing.
+    """
+    print("WARNING: Using deprecated function. Consider switching to concatenate_hyperspectral_data_improved()")
+    return concatenate_hyperspectral_data_improved(
+        data_dict,
+        global_normalize=normalize,
+        normalization_method='global_percentile'
+    )
 
 
 def perform_clustering(
