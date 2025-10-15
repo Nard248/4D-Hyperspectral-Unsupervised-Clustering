@@ -344,18 +344,18 @@ class WavelengthAnalyzer:
     def select_top_bands(self):
         """Select top wavelength combinations based on influence scores"""
         print(f"\nSelecting top {self.config.n_bands_to_select} wavelength combinations...")
-        
+
         all_combinations = []
-        
+
         for ex in self.influence_matrix:
             emission_wavelengths = self.dataset.emission_wavelengths.get(ex, None)
-            
+
             for band_idx, influence in enumerate(self.influence_matrix[ex]):
                 if emission_wavelengths and band_idx < len(emission_wavelengths):
                     em_wavelength = emission_wavelengths[band_idx]
                 else:
                     em_wavelength = band_idx  # Fallback to index
-                
+
                 all_combinations.append({
                     'excitation': ex,
                     'emission_idx': band_idx,
@@ -363,17 +363,148 @@ class WavelengthAnalyzer:
                     'influence': influence,
                     'rank': 0  # Will be set later
                 })
-        
+
         # Sort by influence and assign ranks
         all_combinations.sort(key=lambda x: x['influence'], reverse=True)
         for i, combo in enumerate(all_combinations):
             combo['rank'] = i + 1
-        
-        self.selected_bands = all_combinations[:self.config.n_bands_to_select]
-        
+
+        # Apply diversity constraint if enabled
+        if self.config.use_diversity_constraint:
+            print(f"✓ Applying diversity constraint: {self.config.diversity_method}")
+            if self.config.diversity_method == "mmr":
+                self.selected_bands = self._select_bands_mmr(all_combinations)
+            elif self.config.diversity_method == "min_distance":
+                self.selected_bands = self._select_bands_min_distance(all_combinations)
+            else:
+                self.selected_bands = all_combinations[:self.config.n_bands_to_select]
+        else:
+            self.selected_bands = all_combinations[:self.config.n_bands_to_select]
+
         print(f"✓ Selected {len(self.selected_bands)} bands")
         print(f"✓ Influence range: {self.selected_bands[-1]['influence']:.2e} to {self.selected_bands[0]['influence']:.2e}")
-    
+
+    def _select_bands_mmr(self, all_combinations):
+        """
+        Maximum Marginal Relevance (MMR) selection for wavelength diversity.
+        Balances influence (relevance) with spectral diversity.
+        """
+        print(f"  Using MMR with λ={self.config.lambda_diversity}")
+
+        # Get full hyperspectral data for computing spectral profiles
+        all_data = self.dataset.get_all_data()
+
+        # Build mapping from combination to spectral profile
+        band_profiles = {}
+        for ex in all_data:
+            ex_data = all_data[ex].numpy()
+            for band_idx in range(ex_data.shape[-1]):
+                # Mean spectral profile across spatial locations
+                profile = ex_data[:, :, band_idx].flatten()
+                key = (ex, band_idx)
+                band_profiles[key] = profile
+
+        # Normalize profiles for correlation computation
+        from sklearn.preprocessing import normalize
+        for key in band_profiles:
+            profile = band_profiles[key].reshape(1, -1)
+            band_profiles[key] = normalize(profile, axis=1).flatten()
+
+        # Start with highest influence band
+        selected_bands = [all_combinations[0]]
+        selected_keys = [(all_combinations[0]['excitation'], all_combinations[0]['emission_idx'])]
+
+        print(f"  Initial selection: Ex{all_combinations[0]['excitation']:.0f} Em{all_combinations[0]['emission_wavelength']:.1f}nm")
+
+        # Iterative MMR selection
+        max_influence = all_combinations[0]['influence']
+
+        while len(selected_bands) < self.config.n_bands_to_select:
+            best_mmr_score = -np.inf
+            best_combo = None
+            best_key = None
+
+            for combo in all_combinations:
+                combo_key = (combo['excitation'], combo['emission_idx'])
+
+                # Skip if already selected
+                if combo_key in selected_keys:
+                    continue
+
+                # Skip if profile not available
+                if combo_key not in band_profiles:
+                    continue
+
+                # Relevance: normalized influence score
+                relevance = combo['influence'] / max_influence if max_influence > 0 else 0
+
+                # Diversity: maximum similarity to any selected band
+                max_similarity = 0
+                for sel_key in selected_keys:
+                    if sel_key in band_profiles:
+                        # Cosine similarity between spectral profiles
+                        similarity = np.dot(band_profiles[combo_key], band_profiles[sel_key])
+                        max_similarity = max(max_similarity, abs(similarity))
+
+                # MMR score: relevance - λ × max_similarity
+                mmr_score = relevance - self.config.lambda_diversity * max_similarity
+
+                if mmr_score > best_mmr_score:
+                    best_mmr_score = mmr_score
+                    best_combo = combo
+                    best_key = combo_key
+
+            if best_combo is not None:
+                selected_bands.append(best_combo)
+                selected_keys.append(best_key)
+
+                if len(selected_bands) % 5 == 0:
+                    print(f"  Selected {len(selected_bands)}/{self.config.n_bands_to_select}: "
+                          f"Ex{best_combo['excitation']:.0f} Em{best_combo['emission_wavelength']:.1f}nm "
+                          f"(MMR score: {best_mmr_score:.4f})")
+            else:
+                # No more valid candidates
+                print(f"  Warning: Only found {len(selected_bands)} bands with diversity constraint")
+                break
+
+        return selected_bands
+
+    def _select_bands_min_distance(self, all_combinations):
+        """
+        Minimum distance constraint selection.
+        Ensures selected wavelengths are at least min_distance_nm apart.
+        """
+        print(f"  Using minimum distance constraint: {self.config.min_distance_nm} nm")
+
+        selected_bands = []
+
+        for combo in all_combinations:
+            # Check if this wavelength is far enough from already-selected ones
+            is_valid = True
+
+            for selected in selected_bands:
+                # Only check distance for same excitation wavelength
+                if combo['excitation'] == selected['excitation']:
+                    distance = abs(combo['emission_wavelength'] - selected['emission_wavelength'])
+                    if distance < self.config.min_distance_nm:
+                        is_valid = False
+                        break
+
+            if is_valid:
+                selected_bands.append(combo)
+
+                if len(selected_bands) % 5 == 0:
+                    print(f"  Selected {len(selected_bands)}/{self.config.n_bands_to_select}: "
+                          f"Ex{combo['excitation']:.0f} Em{combo['emission_wavelength']:.1f}nm")
+
+            if len(selected_bands) >= self.config.n_bands_to_select:
+                break
+
+        if len(selected_bands) < self.config.n_bands_to_select:
+            print(f"  Warning: Only found {len(selected_bands)} bands satisfying distance constraint")
+
+        return selected_bands
+
     def extract_wavelength_layers(self):
         """Extract and save wavelength layers as TIFF files"""
         if not self.config.save_tiff_layers:

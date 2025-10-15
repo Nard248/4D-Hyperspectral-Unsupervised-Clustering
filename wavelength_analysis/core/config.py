@@ -29,6 +29,12 @@ class AnalysisConfig:
     # Selection parameters
     n_bands_to_select: int = 30
     n_layers_to_extract: int = 10
+
+    # Diversity constraint parameters (NEW)
+    use_diversity_constraint: bool = False  # Enable MMR-based diversity selection
+    diversity_method: str = "mmr"  # "mmr", "min_distance", "none"
+    lambda_diversity: float = 0.5  # MMR diversity parameter (0.0 = no diversity, 1.0 = max diversity)
+    min_distance_nm: float = 15.0  # Minimum spectral distance for "min_distance" method
     
     # Output configuration
     output_dir: str = ""
