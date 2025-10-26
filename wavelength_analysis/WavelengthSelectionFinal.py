@@ -192,21 +192,39 @@ def select_informative_wavelengths_fixed(data_path, mask_path, sample_name, conf
     return unique_combinations, unique_emissions, results
 
 
-def extract_wavelength_subset(full_data, emission_wavelengths_only, verbose=False):
+def extract_wavelength_subset(full_data, wavelength_combinations, verbose=False):
     """
-    Extract subset of data using selected emission wavelengths.
-    Uses emission_wavelengths_only for backward compatibility.
+    FIXED: Extract subset of data using selected excitation-emission wavelength combinations.
+    Only extracts bands that match BOTH excitation AND emission wavelengths.
+
+    Args:
+        full_data: Full hyperspectral data dictionary
+        wavelength_combinations: List of dicts with 'excitation', 'emission', 'combination_name'
+        verbose: Print progress information
+
+    Returns:
+        subset_data: Dictionary with selected bands only
     """
     subset_data = {
         'data': {},
         'metadata': full_data.get('metadata', {}),
-        'excitation_wavelengths': full_data['excitation_wavelengths'],
-        'selected_wavelengths': emission_wavelengths_only
+        'excitation_wavelengths': [],  # Will only include excitations that have selected bands
+        'selected_combinations': wavelength_combinations
     }
 
     total_bands_original = 0
     total_bands_selected = 0
 
+    # Group combinations by excitation wavelength for efficient processing
+    combos_by_excitation = {}
+    for combo in wavelength_combinations:
+        ex = combo['excitation']
+        em = combo['emission']
+        if ex not in combos_by_excitation:
+            combos_by_excitation[ex] = []
+        combos_by_excitation[ex].append(em)
+
+    # Process each excitation wavelength
     for ex in full_data['excitation_wavelengths']:
         ex_str = str(ex)
         ex_data = full_data['data'][ex_str]
@@ -216,16 +234,27 @@ def extract_wavelength_subset(full_data, emission_wavelengths_only, verbose=Fals
 
         total_bands_original += len(original_wavelengths)
 
-        # Find indices of selected wavelengths for this excitation
+        # Check if this excitation has any selected combinations
+        # Need to find matching excitation (with tolerance for floating point)
+        matching_emissions = None
+        for combo_ex, emissions in combos_by_excitation.items():
+            if abs(float(ex) - float(combo_ex)) < 1.0:  # 1nm tolerance for floating point comparison
+                matching_emissions = emissions
+                break
+
+        if matching_emissions is None:
+            # No combinations selected for this excitation, skip it entirely
+            continue
+
+        # Find indices of selected emission wavelengths for this specific excitation
         selected_indices = []
         selected_wl_values = []
 
-        for target_wl in emission_wavelengths_only:
-            # Ensure target_wl is a number
-            target_wl = float(target_wl)
+        for target_em in matching_emissions:
+            target_em = float(target_em)
 
             # Find closest wavelength
-            distances = np.abs(original_wavelengths - target_wl)
+            distances = np.abs(original_wavelengths - target_em)
             closest_idx = np.argmin(distances)
 
             # Only include if reasonably close (within 10 nm) and not duplicate
@@ -234,6 +263,7 @@ def extract_wavelength_subset(full_data, emission_wavelengths_only, verbose=Fals
                 selected_wl_values.append(original_wavelengths[closest_idx])
 
         if selected_indices:
+            # Extract only the selected bands for this excitation
             subset_cube = original_cube[:, :, selected_indices]
             total_bands_selected += len(selected_indices)
 
@@ -242,15 +272,16 @@ def extract_wavelength_subset(full_data, emission_wavelengths_only, verbose=Fals
                 'wavelengths': selected_wl_values,
                 **{k: v for k, v in ex_data.items() if k not in ['cube', 'wavelengths']}
             }
-        else:
-            # Keep all bands if none selected
-            subset_data['data'][ex_str] = ex_data
-            total_bands_selected += len(original_wavelengths)
+
+            # Add this excitation to the list (only if it has selected bands)
+            if ex not in subset_data['excitation_wavelengths']:
+                subset_data['excitation_wavelengths'].append(ex)
 
     if verbose:
         reduction_pct = (1 - total_bands_selected / total_bands_original) * 100 if total_bands_original > 0 else 0
-        print(
-            f"  Data reduction: {total_bands_original} → {total_bands_selected} bands ({reduction_pct:.1f}% reduction)")
+        print(f"  Data reduction: {total_bands_original} → {total_bands_selected} bands ({reduction_pct:.1f}% reduction)")
+        print(f"  Selected {len(wavelength_combinations)} specific excitation-emission pairs")
+        print(f"  Excitations with selected bands: {len(subset_data['excitation_wavelengths'])}")
 
     return subset_data
 
@@ -262,6 +293,12 @@ ROI_REGIONS = [
     {'name': 'Region 3', 'coords': (175, 225, 425, 475), 'color': '#00FF00'},  # Green
     {'name': 'Region 4', 'coords': (185, 225, 675, 700), 'color': '#FFFF00'},  # Yellow
 ]
+# ROI_REGIONS = [
+#     {'name': 'Region 1', 'coords': (175, 220, 100, 150), 'color': '#FF0000'},  # Red
+#     {'name': 'Region 2', 'coords': (175, 220, 260, 300), 'color': '#0000FF'},  # Blue
+#     # {'name': 'Region 3', 'coords': (175, 225, 425, 475), 'color': '#00FF00'},  # Green
+#     # {'name': 'Region 4', 'coords': (175, 225, 650, 700), 'color': '#FFFF00'},  # Yellow
+# ]
 
 
 def create_roi_colormap(roi_regions):
@@ -765,10 +802,12 @@ sample_shape = full_data['data'][sample_ex]['cube'].shape
 print(f"  Full spatial dimensions: {sample_shape[0]} x {sample_shape[1]} pixels")
 
 # Set cropping parameters
-# start_col = 1392 - 925
-# end_col = 1392
 start_col = 1392 - 925
-end_col = 830
+end_col = 1392
+# start_col = 1392 - 925
+# end_col = 830
+# start_col = 1392 - 530
+# end_col = 1329
 
 print(f"\nCropping data to horizontal range: {start_col} to {end_col}")
 print(f"Original spatial dimensions: {sample_shape[0]} x {sample_shape[1]}")
@@ -811,13 +850,49 @@ working_shape = full_data['data'][sample_ex]['cube'].shape
 print(f"  Spatial: {working_shape[0]} x {working_shape[1]} pixels")
 print(f"  Ground truth: {ground_truth.shape}")
 print(f"  Total pixels for analysis: {ground_truth.size:,}")
+
+# %%
+# CRITICAL FIX: Save cropped data for autoencoder training
+print("\n" + "=" * 80)
+print("SAVING CROPPED DATA FOR WAVELENGTH SELECTION")
+print("=" * 80)
+
+# Create temporary directory for cropped data
+cropped_data_dir = base_dir / "data" / "processed" / sample_name / "temp_cropped"
+cropped_data_dir.mkdir(parents=True, exist_ok=True)
+
+# Save cropped hyperspectral data
+cropped_data_path = cropped_data_dir / "lichens_data_cropped.pkl"
+with open(cropped_data_path, 'wb') as f:
+    pickle.dump(full_data, f)
+
+# Save cropped mask
+cropped_mask_path = cropped_data_dir / "lichens_mask_cropped.npy"
+# Create a simple mask (all valid pixels in the cropped region)
+cropped_mask = np.ones(ground_truth.shape, dtype=bool)
+cropped_mask[ground_truth == -1] = False
+np.save(cropped_mask_path, cropped_mask)
+
+print(f"✓ Cropped data saved to: {cropped_data_path}")
+print(f"✓ Cropped mask saved to: {cropped_mask_path}")
+print(f"  Cropped shape: {full_data['data'][sample_ex]['cube'].shape}")
+
+# UPDATE PATHS to use cropped data for wavelength selection
+data_path = cropped_data_path
+mask_path = cropped_mask_path
+
+print(f"\n✓ Wavelength selection will now train on CROPPED data")
+print(f"  Data path updated to: {data_path.name}")
+print(f"  Mask path updated to: {mask_path.name}")
+print("=" * 80)
+
 # %% md
 ## 4. Baseline: Full Data Clustering
 # %%
 print("=" * 80)
 print("BASELINE: Clustering with Full Data")
 print("=" * 80)
-n_clusters = 4  # Using 4 clusters to match 4 ROI regions
+n_clusters = len(ROI_REGIONS)  # Match number of ROI regions (currently 2)
 
 # Create ROI colormap for consistent visualization
 roi_colormap = create_roi_colormap(ROI_REGIONS)
@@ -886,168 +961,24 @@ plt.axis('off')
 plt.tight_layout()
 plt.savefig(paper_results_dir / "baseline_full_data.png", dpi=300, bbox_inches='tight')
 plt.close()
-# %% md
-## 5. Define Wavelength Selection Configurations
-# %%
-configurations = [
-    # ============================================================================
-    # SELECTED TOP 10 CONFIGURATIONS BASED ON EXPERIMENTAL RESULTS
-    # Results from: wavelength_analysis/validation_results/20251012_212608
-    # ============================================================================
 
-    # ============================================================================
-    # 🥇 BEST 5: Top-tier performance (Purity: 0.8668-0.8682)
-    # ============================================================================
-    # All use variance dimension selection + MMR diversity
-    # These configurations achieve the highest purity scores
-
-    {
-        'name': 'mmr_lambda050_variance',  # BASELINE MMR - Balanced diversity/influence
-        'dimension_selection_method': 'variance',
-        'perturbation_method': 'standard_deviation',
-        'perturbation_magnitudes': [15, 30, 45],
-        'n_important_dimensions': 7,
-        'n_bands_to_select': 10,
-        'normalization_method': 'max_per_excitation',
-        'use_diversity_constraint': True,
-        'diversity_method': 'mmr',
-        'lambda_diversity': 0.5  # Balanced: equal weight to influence and diversity
-    },
-
-    {
-        'name': 'mmr_lambda030_variance',  # LOW LAMBDA - Influence-focused
-        'dimension_selection_method': 'variance',
-        'perturbation_method': 'standard_deviation',
-        'perturbation_magnitudes': [15, 30, 45],
-        'n_important_dimensions': 7,
-        'n_bands_to_select': 10,
-        'normalization_method': 'max_per_excitation',
-        'use_diversity_constraint': True,
-        'diversity_method': 'mmr',
-        'lambda_diversity': 0.3  # Favor influence over diversity
-    },
-
-    {
-        'name': 'mmr_lambda070_variance',  # HIGH LAMBDA - Diversity-focused
-        'dimension_selection_method': 'variance',
-        'perturbation_method': 'standard_deviation',
-        'perturbation_magnitudes': [15, 30, 45],
-        'n_important_dimensions': 7,
-        'n_bands_to_select': 10,
-        'normalization_method': 'max_per_excitation',
-        'use_diversity_constraint': True,
-        'diversity_method': 'mmr',
-        'lambda_diversity': 0.7  # Favor diversity over influence
-    },
-
-    {
-        'name': 'mmr_11bands_lambda05',  # MORE BANDS - Testing 11 bands vs 10
-        'dimension_selection_method': 'variance',
-        'perturbation_method': 'standard_deviation',
-        'perturbation_magnitudes': [12, 25, 40],
-        'n_important_dimensions': 8,
-        'n_bands_to_select': 11,
-        'normalization_method': 'max_per_excitation',
-        'use_diversity_constraint': True,
-        'diversity_method': 'mmr',
-        'lambda_diversity': 0.5
-    },
-
-    {
-        'name': 'mmr_perturbation_percentile',  # DIFFERENT PERTURBATION - percentile method
-        'dimension_selection_method': 'variance',
-        'perturbation_method': 'percentile',
-        'perturbation_magnitudes': [10, 20, 35],
-        'n_important_dimensions': 7,
-        'n_bands_to_select': 10,
-        'normalization_method': 'max_per_excitation',
-        'use_diversity_constraint': True,
-        'diversity_method': 'mmr',
-        'lambda_diversity': 0.5
-    },
-
-    # ============================================================================
-    # 🥈 MEDIUM 3: Good performance with better data reduction (Purity: 0.8600-0.8654)
-    # ============================================================================
-    # Fewer bands (7-8) with acceptable performance loss (~2%)
-    # Demonstrates efficiency gains (76-80% data reduction)
-
-    {
-        'name': 'hybrid_conservative_mmr',  # 8 BANDS - Conservative approach
-        'dimension_selection_method': 'variance',
-        'perturbation_method': 'standard_deviation',
-        'perturbation_magnitudes': [10, 20, 30],
-        'n_important_dimensions': 8,
-        'n_bands_to_select': 8,
-        'normalization_method': 'max_per_excitation',
-        'use_diversity_constraint': True,
-        'diversity_method': 'mmr',
-        'lambda_diversity': 0.45
-    },
-
-    {
-        'name': 'mmr_8bands_lambda05',  # 8 BANDS - Balanced MMR
-        'dimension_selection_method': 'variance',
-        'perturbation_method': 'standard_deviation',
-        'perturbation_magnitudes': [15, 30, 45],
-        'n_important_dimensions': 6,
-        'n_bands_to_select': 8,
-        'normalization_method': 'max_per_excitation',
-        'use_diversity_constraint': True,
-        'diversity_method': 'mmr',
-        'lambda_diversity': 0.5
-    },
-
-    {
-        'name': 'mmr_7bands_lambda05',  # 7 BANDS - Maximum efficiency
-        'dimension_selection_method': 'variance',
-        'perturbation_method': 'standard_deviation',
-        'perturbation_magnitudes': [20, 40, 60],
-        'n_important_dimensions': 6,
-        'n_bands_to_select': 7,
-        'normalization_method': 'max_per_excitation',
-        'use_diversity_constraint': True,
-        'diversity_method': 'mmr',
-        'lambda_diversity': 0.5
-    },
-
-    # ============================================================================
-    # 🔻 NOT SO GOOD 2: Representative poor performers for validation (Purity: 0.7841-0.8145)
-    # ============================================================================
-    # Demonstrates that dimension selection method matters more than diversity strategy
-    # Validates that activation and PCA methods underperform compared to variance
-
-    {
-        'name': 'mmr_activation_8bands',  # ACTIVATION METHOD - Best activation result (still poor)
-        'dimension_selection_method': 'activation',
-        'perturbation_method': 'percentile',
-        'perturbation_magnitudes': [5, 10, 20],
-        'n_important_dimensions': 8,
-        'n_bands_to_select': 8,
-        'normalization_method': 'variance',
-        'use_diversity_constraint': True,
-        'diversity_method': 'mmr',
-        'lambda_diversity': 0.5
-    },
-
-    {
-        'name': 'mmr_pca_lambda05',  # PCA METHOD - Representative PCA failure
-        'dimension_selection_method': 'pca',
-        'perturbation_method': 'absolute_range',
-        'perturbation_magnitudes': [20, 40, 60],
-        'n_important_dimensions': 8,
-        'n_bands_to_select': 10,
-        'normalization_method': 'variance',
-        'use_diversity_constraint': True,
-        'diversity_method': 'mmr',
-        'lambda_diversity': 0.5
-    },
-]
+# Import generated configurations with n_important_dimensions=1 and n_bands_to_select from 3-180
+from generated_configs import configurations
 
 print(f"Defined {len(configurations)} configurations to test:")
-for config in configurations:
-    print(f"{config['name']}: {config['n_bands_to_select']} bands, "
-          f"{config['dimension_selection_method']} method")
+print(f"Configuration range: {configurations[0]['n_bands_to_select']} to {configurations[-1]['n_bands_to_select']} bands")
+print(f"All configurations use:")
+print(f"  - n_important_dimensions: {configurations[0]['n_important_dimensions']}")
+print(f"  - dimension_selection_method: {configurations[0]['dimension_selection_method']}")
+print(f"  - diversity_method: {configurations[0]['diversity_method']}")
+print(f"  - lambda_diversity: {configurations[0]['lambda_diversity']}")
+print(f"\nFirst 3 configurations:")
+for i, config in enumerate(configurations[:3]):
+    print(f"  [{i+1}] {config['name']}: {config['n_bands_to_select']} bands")
+print(f"...")
+print(f"Last 3 configurations:")
+for i, config in enumerate(configurations[-3:], start=len(configurations)-2):
+    print(f"  [{i}] {config['name']}: {config['n_bands_to_select']} bands")
 # %% md
 ## 6. Run All Configurations
 # %%
@@ -1065,10 +996,12 @@ for i, config in enumerate(tqdm(configurations, desc="Testing configurations")):
 
     try:
         # Step 1: TIME WAVELENGTH SELECTION
+        # NOTE: data_path and mask_path now point to CROPPED data (see line 842-843)
+        # This ensures the autoencoder trains on the same cropped region used for clustering
         with PerformanceTimer() as selection_timer:
             wavelength_combinations, emission_wavelengths_only, selection_results = select_informative_wavelengths_fixed(
-                data_path,
-                mask_path,
+                data_path,  # Points to cropped data: lichens_data_cropped.pkl
+                mask_path,  # Points to cropped mask: lichens_mask_cropped.npy
                 sample_name,
                 config,
                 verbose=False
@@ -1086,10 +1019,10 @@ for i, config in enumerate(tqdm(configurations, desc="Testing configurations")):
             print(f"  Example: {wavelength_combinations[0]['combination_name']}")
         print(f"  ⏱️ Selection time: {selection_timer.elapsed:.2f}s")
 
-        # Step 2: Extract subset (using emission wavelengths for compatibility)
+        # Step 2: Extract subset (FIXED: now using full excitation-emission combinations)
         subset_data = extract_wavelength_subset(
             full_data,
-            emission_wavelengths_only,
+            wavelength_combinations,  # FIXED: Pass full combinations, not just emissions
             verbose=True
         )
 
@@ -1509,10 +1442,7 @@ if not df_combinations.empty:
     print(f"    - Excitation_Popularity: Most useful excitation wavelengths")
 print(f"    - Summary: Best configurations by metric")
 print(f"  CSV: {csv_path}")
-# %% md
-## 8. Analysis and Visualization
-# %%
-# Create comprehensive comparison plot with improved visibility
+
 fig, axes = plt.subplots(2, 3, figsize=(18, 12))  # Increased from (15, 10)
 
 # Plot 1: Purity vs Data Reduction
