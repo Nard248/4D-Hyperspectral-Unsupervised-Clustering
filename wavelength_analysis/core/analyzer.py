@@ -87,15 +87,15 @@ class WavelengthAnalyzer:
         try:
             self.model.load_state_dict(torch.load(self.config.model_path, map_location=self.device))
             self.model = self.model.to(self.device)
-            print(f"✓ Dataset loaded: {len(self.dataset.excitation_wavelengths)} excitations")
-            print(f"✓ Model loaded and moved to {self.device}")
+            print(f"Dataset loaded: {len(self.dataset.excitation_wavelengths)} excitations")
+            print(f"Model loaded and moved to {self.device}")
         except FileNotFoundError as e:
-            print(f"\n⚠ Model file not found: {self.config.model_path}")
+            print(f"\nWarning: Model file not found: {self.config.model_path}")
             print(f"Training a new model from scratch...")
             self._train_compatible_model()
         except RuntimeError as e:
             if "Missing key(s)" in str(e) or "size mismatch" in str(e):
-                print(f"\n⚠ WARNING: Model wavelengths don't match data wavelengths!")
+                print(f"\nWARNING: Model wavelengths don't match data wavelengths!")
                 print(f"  Data wavelengths: {self.dataset.excitation_wavelengths}")
                 print(f"  This usually means the model was trained on different wavelength data.")
                 print(f"\nAttempting to train a new compatible model...")
@@ -134,7 +134,7 @@ class WavelengthAnalyzer:
             if len(patch_coords) >= self.config.n_baseline_patches:
                 break
         
-        print(f"✓ Selected {len(patch_coords)} patches of size {patch_size}x{patch_size}")
+        print(f"Selected {len(patch_coords)} patches of size {patch_size}x{patch_size}")
         
         # Extract patches for each excitation
         for ex in all_data:
@@ -150,7 +150,7 @@ class WavelengthAnalyzer:
             self.baseline_latent = self.model.encode(patches_data_device)
             self.baseline_reconstruction = self.model.decode(self.baseline_latent)
         
-        print(f"✓ Baseline latent shape: {self.baseline_latent.shape}")
+        print(f"Baseline latent shape: {self.baseline_latent.shape}")
     
     def select_important_dimensions(self):
         """Select most important latent dimensions"""
@@ -198,8 +198,8 @@ class WavelengthAnalyzer:
         coordinate_importance.sort(reverse=True, key=lambda x: x[0])
         self.important_dims = coordinate_importance[:self.config.n_important_dimensions]
         
-        print(f"✓ Selected top {len(self.important_dims)} dimensions")
-        print(f"✓ Top 5 dimensions:")
+        print(f"Selected top {len(self.important_dims)} dimensions")
+        print(f"Top 5 dimensions:")
         for i, (score, coords) in enumerate(self.important_dims[:5]):
             print(f"   {i+1}. {coords}: importance = {score:.6f}")
     
@@ -224,7 +224,7 @@ class WavelengthAnalyzer:
         magnitudes = self.config.perturbation_magnitudes
         directions = self.config.perturbation_directions
         
-        print(f"✓ Analyzing {len(self.important_dims)} dimensions with magnitudes {magnitudes}")
+        print(f"Analyzing {len(self.important_dims)} dimensions with magnitudes {magnitudes}")
         
         for dim_idx, (importance_score, coords) in enumerate(self.important_dims):
             c, l, h, w = coords
@@ -258,7 +258,7 @@ class WavelengthAnalyzer:
                         
                         total_perturbations += 1
         
-        print(f"✓ Completed {total_perturbations} perturbations")
+        print(f"Completed {total_perturbations} perturbations")
         
         # Apply normalization
         if self.config.normalization_method != 'none':
@@ -325,7 +325,7 @@ class WavelengthAnalyzer:
     
     def _normalize_influences(self):
         """Normalize influence scores"""
-        print(f"✓ Applying {self.config.normalization_method} normalization...")
+        print(f"Applying {self.config.normalization_method} normalization...")
         
         if self.config.normalization_method == 'variance':
             all_data = self.dataset.get_all_data()
@@ -371,7 +371,7 @@ class WavelengthAnalyzer:
 
         # Apply diversity constraint if enabled
         if self.config.use_diversity_constraint:
-            print(f"✓ Applying diversity constraint: {self.config.diversity_method}")
+            print(f"Applying diversity constraint: {self.config.diversity_method}")
             if self.config.diversity_method == "mmr":
                 self.selected_bands = self._select_bands_mmr(all_combinations)
             elif self.config.diversity_method == "min_distance":
@@ -381,15 +381,15 @@ class WavelengthAnalyzer:
         else:
             self.selected_bands = all_combinations[:self.config.n_bands_to_select]
 
-        print(f"✓ Selected {len(self.selected_bands)} bands")
-        print(f"✓ Influence range: {self.selected_bands[-1]['influence']:.2e} to {self.selected_bands[0]['influence']:.2e}")
+        print(f"Selected {len(self.selected_bands)} bands")
+        print(f"Influence range: {self.selected_bands[-1]['influence']:.2e} to {self.selected_bands[0]['influence']:.2e}")
 
     def _select_bands_mmr(self, all_combinations):
         """
         Maximum Marginal Relevance (MMR) selection for wavelength diversity.
         Balances influence (relevance) with spectral diversity.
         """
-        print(f"  Using MMR with λ={self.config.lambda_diversity}")
+        print(f"  Using MMR with lambda={self.config.lambda_diversity}")
 
         # Get full hyperspectral data for computing spectral profiles
         all_data = self.dataset.get_all_data()
@@ -573,7 +573,7 @@ class WavelengthAnalyzer:
                 'config': self.config.to_dict()
             }, f, indent=2)
         
-        print(f"✓ Extracted {len(layer_info)} layers to {layers_dir}")
+        print(f"Extracted {len(layer_info)} layers to {layers_dir}")
         return layer_info
     
     def save_results(self):
@@ -630,7 +630,7 @@ class WavelengthAnalyzer:
             for band in self.selected_bands:
                 f.write(f"{band['rank']:<5} {band['excitation']:<15.1f} {band['emission_wavelength']:<15.1f} {band['influence']:<15.6f}\n")
         
-        print(f"✓ Results saved to {self.output_dir}")
+        print(f"Results saved to {self.output_dir}")
     
     def generate_visualizations(self):
         """Generate comprehensive visualizations"""
@@ -652,7 +652,7 @@ class WavelengthAnalyzer:
         visualizer.create_excitation_distribution()
         visualizer.create_summary_dashboard()
         
-        print(f"✓ Visualizations saved to {viz_dir}")
+        print(f"Visualizations saved to {viz_dir}")
     
     def run_complete_analysis(self) -> Dict:
         """
@@ -695,11 +695,11 @@ class WavelengthAnalyzer:
         print("="*80)
         print("ANALYSIS COMPLETE!")
         print("="*80)
-        print(f"✓ Sample: {self.config.sample_name}")
-        print(f"✓ Selected {len(self.selected_bands)} wavelength combinations")
-        print(f"✓ Compression ratio: {results['performance_metrics']['compression_ratio']:.1f}x")
-        print(f"✓ Max influence score: {results['performance_metrics']['max_influence_score']:.2e}")
-        print(f"✓ Results saved to: {self.output_dir}")
+        print(f"Sample: {self.config.sample_name}")
+        print(f"Selected {len(self.selected_bands)} wavelength combinations")
+        print(f"Compression ratio: {results['performance_metrics']['compression_ratio']:.1f}x")
+        print(f"Max influence score: {results['performance_metrics']['max_influence_score']:.2e}")
+        print(f"Results saved to: {self.output_dir}")
         
         return results
     
@@ -752,5 +752,5 @@ class WavelengthAnalyzer:
         # Update config to use new model
         self.config.model_path = str(new_model_path)
         
-        print(f"\n✓ New model trained and saved to: {new_model_path}")
-        print(f"✓ Model ready for wavelength analysis")
+        print(f"\nNew model trained and saved to: {new_model_path}")
+        print(f"Model ready for wavelength analysis")
