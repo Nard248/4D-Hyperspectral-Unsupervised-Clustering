@@ -519,6 +519,7 @@ class SupervisedVisualizations:
                                       save_name: str = "roi_overlay_accuracy.png"):
         """
         Create ROI overlay visualization with accuracy metrics displayed.
+        Uses ROI colors for clustering visualization.
 
         Args:
             cluster_map: 2D array of cluster labels
@@ -534,10 +535,28 @@ class SupervisedVisualizations:
 
         fig, axes = plt.subplots(1, 3, figsize=(20, 7))
 
+        # Create RGB image using ROI colors
+        rgb_image = np.ones((*cluster_map.shape, 3))  # White background
+
+        # Get unique cluster IDs from the cluster_map (excluding background -1)
+        unique_clusters = np.unique(cluster_map[cluster_map >= 0])
+
+        # Map each actual cluster to its corresponding ROI color
+        for idx, cluster_id in enumerate(sorted(unique_clusters)):
+            if idx < len(roi_regions):
+                roi = roi_regions[idx]
+                color_hex = roi['color'].lstrip('#')
+                color_rgb = np.array([int(color_hex[i:i+2], 16)/255.0 for i in (0, 2, 4)])
+                mask = cluster_map == cluster_id
+                rgb_image[mask] = color_rgb
+
+        # Mask background
+        background_mask = cluster_map == -1
+        rgb_image[background_mask] = [1, 1, 1]
+
         # Panel 1: Clustering result without overlay
         ax1 = axes[0]
-        cluster_display = np.ma.masked_where(cluster_map == -1, cluster_map)
-        im1 = ax1.imshow(cluster_display, cmap='tab10', interpolation='nearest')
+        ax1.imshow(rgb_image, interpolation='nearest')
         ax1.set_title('Clustering Result', fontsize=14, fontweight='bold')
         ax1.axis('off')
 
@@ -547,11 +566,13 @@ class SupervisedVisualizations:
                 verticalalignment='top',
                 bbox=dict(boxstyle='round', facecolor='white', alpha=0.9))
 
-        # Panel 2: Clustering with ROI boxes and accuracy metrics
+        # Panel 2: Clustering result with ROI boxes overlaid
         ax2 = axes[1]
-        im2 = ax2.imshow(cluster_display, cmap='tab10', interpolation='nearest', alpha=0.8)
 
-        # Draw ROI rectangles with accuracy metrics
+        # Show the clustering result with ROI colors
+        ax2.imshow(rgb_image, interpolation='nearest')
+
+        # Draw ROI rectangles ON TOP of the clustering result
         for roi in roi_regions:
             roi_name = roi['name']
             y_start, y_end, x_start, x_end = roi['coords']
@@ -563,27 +584,20 @@ class SupervisedVisualizations:
             if roi_metrics and roi_name in roi_metrics:
                 roi_acc = f"{roi_metrics[roi_name]['accuracy']:.1%}"
 
-            # Draw rectangle
+            # Draw rectangle border with ROI color
             rect = Rectangle((x_start, y_start), width, height,
                            linewidth=3, edgecolor=roi['color'],
                            facecolor='none', linestyle='-')
             ax2.add_patch(rect)
 
-            # Add label with accuracy
+            # Add label with accuracy above the ROI
             label_text = f"{roi_name}\nAcc: {roi_acc}"
             ax2.text(x_start + width/2, y_start - 5, label_text,
                     color=roi['color'], fontsize=10, fontweight='bold',
                     ha='center', va='bottom',
                     bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.9))
 
-            # Add accuracy inside ROI if large enough
-            if height > 30 and width > 30:
-                ax2.text(x_start + width/2, y_start + height/2, roi_acc,
-                        color='white', fontsize=14, fontweight='bold',
-                        ha='center', va='center',
-                        bbox=dict(boxstyle='round,pad=0.5', facecolor=roi['color'], alpha=0.7))
-
-        ax2.set_title(f'ROI Overlay (Overall Acc: {overall_accuracy:.2%})',
+        ax2.set_title(f'Clustering with ROI Overlay (Overall Acc: {overall_accuracy:.2%})',
                      fontsize=14, fontweight='bold')
         ax2.axis('off')
 
@@ -746,12 +760,31 @@ class SupervisedVisualizations:
                                s=100, alpha=0.7, c=results_df[metric],
                                cmap='viridis', edgecolors='black', linewidth=1)
 
-            # Add trend line
-            z = np.polyfit(results_df['n_combinations_selected'], results_df[metric], 2)
-            p = np.poly1d(z)
-            x_trend = np.linspace(results_df['n_combinations_selected'].min(),
-                                results_df['n_combinations_selected'].max(), 100)
-            ax.plot(x_trend, p(x_trend), "r-", alpha=0.5, linewidth=2, label='Trend')
+            # Add trend line with robust handling
+            df_fit = results_df[['n_combinations_selected', metric]].replace([np.inf, -np.inf], np.nan).dropna()
+            trend_plotted = False
+            if len(df_fit) >= 3 and df_fit['n_combinations_selected'].nunique() >= 3:
+                x = df_fit['n_combinations_selected'].astype(float).values
+                y = df_fit[metric].astype(float).values
+                try:
+                    z = np.polyfit(x, y, 2)
+                    p = np.poly1d(z)
+                    x_trend = np.linspace(x.min(), x.max(), 100)
+                    ax.plot(x_trend, p(x_trend), "r-", alpha=0.5, linewidth=2, label='Trend (Quad)')
+                    trend_plotted = True
+                except np.linalg.LinAlgError:
+                    pass
+            if not trend_plotted and len(df_fit) >= 2 and df_fit['n_combinations_selected'].nunique() >= 2:
+                x = df_fit['n_combinations_selected'].astype(float).values
+                y = df_fit[metric].astype(float).values
+                try:
+                    z = np.polyfit(x, y, 1)
+                    p = np.poly1d(z)
+                    x_trend = np.linspace(x.min(), x.max(), 100)
+                    ax.plot(x_trend, p(x_trend), "r--", alpha=0.5, linewidth=2, label='Trend (Lin)')
+                    trend_plotted = True
+                except np.linalg.LinAlgError:
+                    pass
 
             # Highlight best point
             best_idx = results_df[metric].idxmax()
@@ -768,8 +801,11 @@ class SupervisedVisualizations:
             ax.grid(True, alpha=0.3)
             ax.legend(loc='best')
 
-            # Add correlation coefficient
-            corr = results_df['n_combinations_selected'].corr(results_df[metric])
+            # Add correlation coefficient (use cleaned df if possible)
+            if len(df_fit) >= 2:
+                corr = df_fit['n_combinations_selected'].corr(df_fit[metric])
+            else:
+                corr = results_df['n_combinations_selected'].corr(results_df[metric])
             ax.text(0.02, 0.98, f'Correlation: {corr:.3f}',
                    transform=ax.transAxes, fontsize=10,
                    verticalalignment='top',
@@ -948,6 +984,226 @@ class SupervisedVisualizations:
         cbar.set_label(performance_metric.replace('_', ' ').title(),
                       rotation=270, labelpad=20)
 
+        plt.tight_layout()
+        save_path = self.output_dir / save_name
+        plt.savefig(save_path, dpi=self.dpi, bbox_inches='tight')
+        plt.close()
+        print(f"  Saved: {save_name}")
+
+    def plot_enumerated_objects(self, ground_truth: np.ndarray, labeled_objects: np.ndarray,
+                               num_objects: int,
+                               title: str = "Ground Truth with Enumerated Objects",
+                               save_name: str = "enumerated_objects.png"):
+        """
+        Create visualization showing object numbers on ground truth.
+
+        Args:
+            ground_truth: 2D ground truth array
+            labeled_objects: 2D array with object labels from scipy.ndimage.label
+            num_objects: Number of objects found
+            title: Plot title
+            save_name: Filename for saving
+        """
+        fig, axes = plt.subplots(1, 2, figsize=(16, 8))
+
+        # Panel 1: Ground truth
+        ax1 = axes[0]
+        gt_display = np.ma.masked_where(ground_truth == -1, ground_truth)
+        im1 = ax1.imshow(gt_display, cmap='tab10', interpolation='nearest')
+        ax1.set_title('Ground Truth', fontsize=14, fontweight='bold')
+        ax1.axis('off')
+        plt.colorbar(im1, ax=ax1, fraction=0.046, label='Class ID')
+
+        # Panel 2: Ground truth with object numbers
+        ax2 = axes[1]
+        im2 = ax2.imshow(gt_display, cmap='tab10', interpolation='nearest', alpha=0.6)
+        ax2.set_title(f'Ground Truth with Object Numbers ({num_objects} objects)',
+                     fontsize=14, fontweight='bold')
+        ax2.axis('off')
+
+        # Add object numbers at centroids
+        for obj_id in range(1, num_objects + 1):
+            obj_mask = labeled_objects == obj_id
+            if np.any(obj_mask):
+                # Calculate centroid
+                y_coords, x_coords = np.where(obj_mask)
+                centroid_y = int(np.mean(y_coords))
+                centroid_x = int(np.mean(x_coords))
+
+                # Draw object number
+                ax2.text(centroid_x, centroid_y, str(obj_id),
+                        color='white', fontsize=12, fontweight='bold',
+                        ha='center', va='center',
+                        bbox=dict(boxstyle='circle,pad=0.3', facecolor='black',
+                                edgecolor='yellow', linewidth=2, alpha=0.8))
+
+        plt.suptitle(title, fontsize=16, fontweight='bold')
+        plt.tight_layout()
+        save_path = self.output_dir / save_name
+        plt.savefig(save_path, dpi=self.dpi, bbox_inches='tight')
+        plt.close()
+        print(f"  Saved: {save_name}")
+
+    def plot_simple_classification(self, cluster_map: np.ndarray,
+                                   roi_regions: List[Dict] = None,
+                                   title: str = "Classification Result",
+                                   save_name: str = "classification.png"):
+        """
+        Create a simple classification result visualization using ROI colors.
+
+        Args:
+            cluster_map: 2D array of cluster labels
+            roi_regions: List of ROI dictionaries with colors (REQUIRED)
+            title: Plot title
+            save_name: Filename for saving
+        """
+        fig, ax = plt.subplots(figsize=(12, 10))
+
+        if roi_regions is None:
+            # Fallback to tab10 if no ROI regions provided
+            cluster_display = np.ma.masked_where(cluster_map == -1, cluster_map)
+            im = ax.imshow(cluster_display, cmap='tab10', interpolation='nearest')
+        else:
+            # Create RGB image using ROI colors
+            rgb_image = np.ones((*cluster_map.shape, 3)) * 0.9  # Light gray background
+
+            # Get unique cluster IDs from the cluster_map (excluding background -1)
+            unique_clusters = np.unique(cluster_map[cluster_map >= 0])
+
+            # Map each actual cluster to its corresponding ROI color
+            for idx, cluster_id in enumerate(sorted(unique_clusters)):
+                if idx < len(roi_regions):
+                    roi = roi_regions[idx]
+                    # Get ROI color as RGB
+                    color_hex = roi['color'].lstrip('#')
+                    color_rgb = np.array([int(color_hex[i:i+2], 16)/255.0 for i in (0, 2, 4)])
+
+                    # Color all pixels of this cluster
+                    mask = cluster_map == cluster_id
+                    rgb_image[mask] = color_rgb
+
+            # Mask background
+            background_mask = cluster_map == -1
+            rgb_image[background_mask] = [1, 1, 1]  # White background
+
+            ax.imshow(rgb_image, interpolation='nearest')
+
+        ax.set_title(title, fontsize=14, fontweight='bold')
+        ax.axis('off')
+
+        plt.tight_layout()
+        save_path = self.output_dir / save_name
+        plt.savefig(save_path, dpi=self.dpi, bbox_inches='tight')
+        plt.close()
+        print(f"  Saved: {save_name}")
+
+    def plot_roi_overlay_with_object_accuracy(self, cluster_map: np.ndarray, ground_truth: np.ndarray,
+                                              roi_regions: List[Dict], labeled_objects: np.ndarray,
+                                              object_metrics: List[Dict],
+                                              overall_accuracy: float,
+                                              title: str = "ROI Overlay with Object Accuracy",
+                                              save_name: str = "roi_overlay_object_accuracy.png"):
+        """
+        Create ROI overlay with clustering result, object numbers, and per-object accuracy.
+
+        Args:
+            cluster_map: 2D array of cluster labels
+            ground_truth: 2D ground truth array
+            roi_regions: List of ROI dictionaries with 'coords' and 'color' keys
+            labeled_objects: 2D array with object labels from scipy.ndimage.label
+            object_metrics: List of dictionaries with per-object metrics
+            overall_accuracy: Overall accuracy value
+            title: Plot title
+            save_name: Filename for saving
+        """
+        from matplotlib.patches import Rectangle
+
+        fig, axes = plt.subplots(1, 2, figsize=(18, 9))
+
+        # Create RGB image using ROI colors
+        rgb_image = np.ones((*cluster_map.shape, 3))  # White background
+
+        # Get unique cluster IDs from the cluster_map (excluding background -1)
+        unique_clusters = np.unique(cluster_map[cluster_map >= 0])
+
+        # Map each actual cluster to its corresponding ROI color
+        for idx, cluster_id in enumerate(sorted(unique_clusters)):
+            if idx < len(roi_regions):
+                roi = roi_regions[idx]
+                color_hex = roi['color'].lstrip('#')
+                color_rgb = np.array([int(color_hex[i:i+2], 16)/255.0 for i in (0, 2, 4)])
+                mask = cluster_map == cluster_id
+                rgb_image[mask] = color_rgb
+
+        # Mask background
+        background_mask = cluster_map == -1
+        rgb_image[background_mask] = [1, 1, 1]
+
+        # Panel 1: Clustering result with ROI boxes
+        ax1 = axes[0]
+        ax1.imshow(rgb_image, interpolation='nearest')
+
+        # Draw ROI rectangles
+        for roi in roi_regions:
+            roi_name = roi['name']
+            y_start, y_end, x_start, x_end = roi['coords']
+            width = x_end - x_start
+            height = y_end - y_start
+
+            # Draw rectangle border with white/black for visibility
+            rect = Rectangle((x_start, y_start), width, height,
+                           linewidth=3, edgecolor='white',
+                           facecolor='none', linestyle='-')
+            ax1.add_patch(rect)
+
+            # Add ROI label
+            ax1.text(x_start + width/2, y_start - 5, roi_name,
+                    color='white', fontsize=10, fontweight='bold',
+                    ha='center', va='bottom',
+                    bbox=dict(boxstyle='round,pad=0.3', facecolor='black', alpha=0.7))
+
+        ax1.set_title(f'Clustering with ROI Overlay\n(Overall Acc: {overall_accuracy:.2%})',
+                     fontsize=14, fontweight='bold')
+        ax1.axis('off')
+
+        # Panel 2: Clustering result with object numbers and per-object accuracy
+        ax2 = axes[1]
+        ax2.imshow(rgb_image, interpolation='nearest', alpha=0.9)
+
+        # Add object numbers and accuracy at centroids
+        for obj_metric in object_metrics:
+            obj_id = obj_metric['object_id']
+            obj_accuracy = obj_metric['accuracy']
+
+            obj_mask = labeled_objects == obj_id
+            if np.any(obj_mask):
+                # Calculate centroid
+                y_coords, x_coords = np.where(obj_mask)
+                centroid_y = int(np.mean(y_coords))
+                centroid_x = int(np.mean(x_coords))
+
+                # Draw object number and accuracy
+                text = f"#{obj_id}\n{obj_accuracy:.1%}"
+
+                # Color based on accuracy (green = good, red = bad)
+                if obj_accuracy >= 0.8:
+                    bbox_color = 'green'
+                elif obj_accuracy >= 0.6:
+                    bbox_color = 'yellow'
+                else:
+                    bbox_color = 'red'
+
+                ax2.text(centroid_x, centroid_y, text,
+                        color='white', fontsize=9, fontweight='bold',
+                        ha='center', va='center',
+                        bbox=dict(boxstyle='round,pad=0.4', facecolor=bbox_color,
+                                edgecolor='white', linewidth=2, alpha=0.9))
+
+        ax2.set_title(f'ROI Overlay with Object Accuracy\n(Overall Acc: {overall_accuracy:.2%})',
+                     fontsize=14, fontweight='bold')
+        ax2.axis('off')
+
+        plt.suptitle(title, fontsize=16, fontweight='bold')
         plt.tight_layout()
         save_path = self.output_dir / save_name
         plt.savefig(save_path, dpi=self.dpi, bbox_inches='tight')

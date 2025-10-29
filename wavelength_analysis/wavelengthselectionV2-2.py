@@ -750,13 +750,149 @@ def main(max_configs=None):
             save_name="BASELINE_roi_overlay.png"
         )
 
+        # Create simple classification PNG for paper-results (with ROI colors)
+        paper_viz.plot_simple_classification(
+            cluster_map=cluster_map_full,
+            roi_regions=ROI_REGIONS,
+            title="BASELINE - Classification",
+            save_name="BASELINE_classification.png"
+        )
+
         # Export supervised metrics
         baseline_metrics_file = metrics_dir / "baseline_supervised_metrics.json"
         sm = SupervisedMetrics(gt_tracker)
         sm.current_metrics = supervised_metrics_full
         sm.export_metrics(baseline_metrics_file, format='json')
 
-    print(f"  ⏱️ Clustering time: {baseline_timer.elapsed:.2f}s")
+    print(f"  [TIME] Clustering time: {baseline_timer.elapsed:.2f}s")
+
+    # ========================================================================
+    # OBJECT-WISE SEGMENTATION (Perform once for all experiments)
+    # ========================================================================
+    print("\n" + "=" * 80)
+    print("OBJECT-WISE SEGMENTATION")
+    print("=" * 80)
+
+    from scipy import ndimage
+    # Create binary mask (non-background pixels)
+    foreground_mask = ground_truth > -1  # Assuming -1 is background
+    # Find connected components (spatially separated objects)
+    labeled_objects, num_objects = ndimage.label(foreground_mask)
+    print(f"Found {num_objects} spatially separated objects in ground truth")
+
+    # Store object masks for reuse
+    object_masks = []
+    for obj_id in range(1, num_objects + 1):
+        obj_mask = labeled_objects == obj_id
+        object_masks.append(obj_mask)
+
+    # ========================================================================
+    # BASELINE: Calculate Object-wise Metrics
+    # ========================================================================
+    print("\nCalculating object-wise metrics for BASELINE...")
+    baseline_object_metrics = []
+    for obj_idx, obj_mask in enumerate(object_masks, 1):
+        # Get pixels for this object
+        y_true = ground_truth[obj_mask]
+        y_pred = cluster_map_full[obj_mask]
+
+        # Skip if empty or all background
+        if len(y_true) == 0 or np.all(y_true == -1):
+            continue
+
+        # Calculate accuracy for this object
+        from sklearn.metrics import accuracy_score
+        obj_accuracy = accuracy_score(y_true[y_true != -1], y_pred[y_true != -1])
+
+        # Get object info
+        true_class = np.unique(y_true[y_true != -1])[0] if len(np.unique(y_true[y_true != -1])) == 1 else -1
+
+        baseline_object_metrics.append({
+            'object_id': obj_idx,
+            'num_pixels': np.sum(obj_mask),
+            'true_class': int(true_class),
+            'accuracy': obj_accuracy
+        })
+
+    # Print baseline object-wise results
+    print(f"\nObject-wise metrics for BASELINE:")
+    print(f"{'Object':<10} {'Class':<8} {'Pixels':<10} {'Accuracy':<10}")
+    print("-"*40)
+    for obj in baseline_object_metrics:
+        print(f"Object-{obj['object_id']:<3} Class-{obj['true_class']:<3} {obj['num_pixels']:<10} {obj['accuracy']:.4f}")
+
+    mean_obj_accuracy_baseline = np.mean([obj['accuracy'] for obj in baseline_object_metrics])
+    std_obj_accuracy_baseline = np.std([obj['accuracy'] for obj in baseline_object_metrics])
+    print(f"\nMean object accuracy: {mean_obj_accuracy_baseline:.4f} ± {std_obj_accuracy_baseline:.4f}")
+
+    # ========================================================================
+    # BASELINE: Create Full Dataset Folder with Object Visualizations
+    # ========================================================================
+    baseline_experiment_folder = experiments_dir / "BASELINE_FULL_DATA"
+    baseline_experiment_folder.mkdir(exist_ok=True)
+
+    # Save baseline object metrics
+    obj_metrics_df_baseline = pd.DataFrame(baseline_object_metrics)
+    obj_metrics_csv_baseline = baseline_experiment_folder / "BASELINE_object_metrics.csv"
+    obj_metrics_df_baseline.to_csv(obj_metrics_csv_baseline, index=False)
+    print(f"\nSaved baseline object metrics to {obj_metrics_csv_baseline.name}")
+
+    # Create baseline object visualizations
+    baseline_viz = SupervisedVisualizations(output_dir=baseline_experiment_folder, dpi=300)
+
+    # 1. Enumerated objects on ground truth (only need to create once)
+    baseline_viz.plot_enumerated_objects(
+        ground_truth,
+        labeled_objects,
+        num_objects,
+        title="Ground Truth with Enumerated Objects",
+        save_name="ground_truth_enumerated_objects.png"
+    )
+
+    # 2. ROI overlay with object numbers and per-object accuracy for baseline
+    baseline_viz.plot_roi_overlay_with_object_accuracy(
+        cluster_map_full,
+        ground_truth,
+        ROI_REGIONS,
+        labeled_objects,
+        baseline_object_metrics,
+        supervised_metrics_full['accuracy'] if supervised_metrics_full else 0,
+        title="BASELINE - ROI Overlay with Object Accuracy",
+        save_name="BASELINE_roi_overlay_object_accuracy.png"
+    )
+
+    # 3. Create all supervised visualizations in baseline folder (same as experiments)
+    baseline_supervised_viz_dir = baseline_experiment_folder / "supervised_visualizations"
+    baseline_supervised_viz_dir.mkdir(exist_ok=True)
+    baseline_supervised_viz = SupervisedVisualizations(output_dir=baseline_supervised_viz_dir, dpi=300)
+    baseline_supervised_viz.create_all_visualizations(
+        supervised_metrics_full,
+        ground_truth,
+        cluster_map_full,
+        supervised_metrics_full.get('roi_metrics') if supervised_metrics_full else None,
+        roi_regions=ROI_REGIONS
+    )
+
+    # 4. Create simple classification PNG in baseline folder (with ROI colors)
+    baseline_viz.plot_simple_classification(
+        cluster_map=cluster_map_full,
+        roi_regions=ROI_REGIONS,
+        title="BASELINE - Classification",
+        save_name="BASELINE_classification.png"
+    )
+
+    # 5. Create ROI overlay main in baseline folder
+    baseline_viz.plot_roi_overlay_with_accuracy(
+        cluster_map=cluster_map_full,
+        ground_truth=ground_truth,
+        roi_regions=ROI_REGIONS,
+        overall_accuracy=supervised_metrics_full['accuracy'] if supervised_metrics_full else 0,
+        roi_metrics=supervised_metrics_full.get('roi_metrics') if supervised_metrics_full else None,
+        title="BASELINE - ROI Overlay",
+        save_name="BASELINE_roi_overlay_main.png"
+    )
+
+    print(f"[SUCCESS] Baseline object visualizations saved to: {baseline_experiment_folder}")
 
     # ========================================================================
     # Run Wavelength Selection Configurations
@@ -782,9 +918,26 @@ def main(max_configs=None):
     print("RUNNING WAVELENGTH SELECTION CONFIGURATIONS (V2)")
     print("=" * 80)
 
+    # Accumulator for object-wise metrics across all configs/runs
+    all_object_metrics = []
+
+    # Add baseline object metrics to accumulator
+    for obj in baseline_object_metrics:
+        all_object_metrics.append({
+            **obj,
+            'config_name': 'BASELINE_FULL_DATA',
+            'n_combinations_selected': total_bands,
+            'n_features': n_features_full,
+            'run_index': -1  # Special index for baseline
+        })
+
     for i, config in enumerate(tqdm(configs_to_run, desc="Running configurations")):  # Run selected configurations
         config_name = config['name']
         print(f"\n[{i + 1}/{n_configs_to_run}] Running: {config_name}")
+
+        # Ensure experiment folder exists before any file writes for this config
+        experiment_folder = experiments_dir / config_name
+        experiment_folder.mkdir(exist_ok=True)
 
         try:
             # Step 1: Wavelength selection
@@ -804,7 +957,7 @@ def main(max_configs=None):
             )
 
             print(f"  Selected {len(wavelength_combinations)} wavelength combinations")
-            print(f"  ⏱️ Selection time: {selection_timer.elapsed:.2f}s")
+            print(f"  [TIME] Selection time: {selection_timer.elapsed:.2f}s")
 
             # Step 2: Extract subset
             subset_data = extract_wavelength_subset(
@@ -843,22 +996,7 @@ def main(max_configs=None):
             # ========================================================================
             print("\n  Performing object-wise analysis...")
 
-            # Segment objects from ground truth (only on first iteration)
-            if i == 0:
-                from scipy import ndimage
-                # Create binary mask (non-background pixels)
-                foreground_mask = ground_truth > -1  # Assuming -1 is background
-                # Find connected components (spatially separated objects)
-                labeled_objects, num_objects = ndimage.label(foreground_mask)
-                print(f"  Found {num_objects} spatially separated objects in ground truth")
-
-                # Store object masks for reuse
-                object_masks = []
-                for obj_id in range(1, num_objects + 1):
-                    obj_mask = labeled_objects == obj_id
-                    object_masks.append(obj_mask)
-
-            # Calculate metrics for each object
+            # Calculate metrics for each object (object_masks already created earlier)
             object_metrics = []
             for obj_idx, obj_mask in enumerate(object_masks, 1):
                 # Get pixels for this object
@@ -879,7 +1017,7 @@ def main(max_configs=None):
                 object_metrics.append({
                     'object_id': obj_idx,
                     'num_pixels': np.sum(obj_mask),
-                    'true_class': true_class,
+                    'true_class': int(true_class),
                     'accuracy': obj_accuracy
                 })
 
@@ -895,18 +1033,23 @@ def main(max_configs=None):
             print(f"\n  Mean object accuracy: {mean_obj_accuracy:.4f} ± {std_obj_accuracy:.4f}")
 
             # Save object metrics to CSV
-            import pandas as pd
             obj_metrics_df = pd.DataFrame(object_metrics)
             obj_metrics_csv = experiment_folder / f"{config_name}_object_metrics.csv"
             obj_metrics_df.to_csv(obj_metrics_csv, index=False)
             print(f"  Saved object metrics to {obj_metrics_csv.name}")
 
+            # Append to global accumulator with metadata
+            for row in object_metrics:
+                all_object_metrics.append({
+                    **row,
+                    'config_name': config_name,
+                    'n_combinations_selected': len(wavelength_combinations),
+                    'n_features': n_features,
+                    'run_index': i
+                })
+
             data_reduction_pct = (1 - n_features / n_features_full) * 100
             speedup = baseline_timer.elapsed / cluster_timer.elapsed if cluster_timer.elapsed > 0 else 0
-
-            # Create experiment folder
-            experiment_folder = experiments_dir / config_name
-            experiment_folder.mkdir(exist_ok=True)
 
             # V2: Create supervised visualizations for this configuration
             if supervised_metrics:
@@ -944,14 +1087,58 @@ def main(max_configs=None):
                     save_name=f"{config_name}_roi_overlay.png"
                 )
 
+                # Create simple classification PNG for paper-results (with ROI colors)
+                paper_viz.plot_simple_classification(
+                    cluster_map=cluster_map,
+                    roi_regions=ROI_REGIONS,
+                    title=f"{config_name} - Classification",
+                    save_name=f"{config_name}_classification.png"
+                )
+
                 # Export supervised metrics
                 config_metrics_file = experiment_folder / f"{config_name}_supervised_metrics.json"
                 sm = SupervisedMetrics(gt_tracker)
                 sm.current_metrics = supervised_metrics
                 sm.export_metrics(config_metrics_file, format='json')
 
+                # Create all 4 key visualizations for this experiment (same as baseline)
+                print(f"  Creating all 4 key visualizations...")
+
+                # 1. Simple classification PNG (config_name_classification.png)
+                config_viz.plot_simple_classification(
+                    cluster_map=cluster_map,
+                    roi_regions=ROI_REGIONS,
+                    title=f"{config_name} - Classification",
+                    save_name=f"{config_name}_classification.png"
+                )
+
+                # 2. ROI overlay main (config_name_roi_overlay_main.png) - already created above
+                # (This is already done in the code above at line ~1072)
+
+                # 3. ROI overlay with object accuracy (config_name_roi_overlay_object_accuracy.png)
+                config_viz.plot_roi_overlay_with_object_accuracy(
+                    cluster_map,
+                    ground_truth,
+                    ROI_REGIONS,
+                    labeled_objects,
+                    object_metrics,
+                    supervised_metrics['accuracy'],
+                    title=f"{config_name} - ROI Overlay with Object Accuracy",
+                    save_name=f"{config_name}_roi_overlay_object_accuracy.png"
+                )
+
+                # 4. Ground truth with enumerated objects (ground_truth_enumerated_objects.png)
+                config_viz.plot_enumerated_objects(
+                    ground_truth,
+                    labeled_objects,
+                    num_objects,
+                    title="Ground Truth with Enumerated Objects",
+                    save_name="ground_truth_enumerated_objects.png"
+                )
+
                 print(f"    V2 Metrics - Accuracy: {supervised_metrics['accuracy']:.4f}, "
                       f"F1: {supervised_metrics['f1_weighted']:.4f}")
+                print(f"    Created all 4 key visualizations in experiment folder")
 
             # Store results
             result = {
@@ -978,7 +1165,7 @@ def main(max_configs=None):
             results.append(result)
 
             print(f"  Purity: {gt_metrics['purity']:.4f} | ARI: {gt_metrics['adjusted_rand_score']:.4f}")
-            print(f"  ⏱️ Clustering time: {cluster_timer.elapsed:.2f}s | Speedup: {speedup:.2f}x")
+            print(f"  [TIME] Clustering time: {cluster_timer.elapsed:.2f}s | Speedup: {speedup:.2f}x")
 
         except Exception as e:
             print(f"Error: {str(e)}")
@@ -1086,12 +1273,31 @@ def main(max_configs=None):
                                s=120, alpha=0.7, c=df_results[metric],
                                cmap='viridis', edgecolors='black', linewidth=1)
 
-            # Trend line
-            z = np.polyfit(df_results['n_combinations_selected'], df_results[metric], 2)
-            p = np.poly1d(z)
-            x_trend = np.linspace(df_results['n_combinations_selected'].min(),
-                                df_results['n_combinations_selected'].max(), 100)
-            ax.plot(x_trend, p(x_trend), "r-", alpha=0.5, linewidth=2, label='Trend')
+            # Trend line with robust handling
+            df_fit = df_results[['n_combinations_selected', metric]].replace([np.inf, -np.inf], np.nan).dropna()
+            trend_plotted = False
+            if len(df_fit) >= 3 and df_fit['n_combinations_selected'].nunique() >= 3:
+                x = df_fit['n_combinations_selected'].astype(float).values
+                y = df_fit[metric].astype(float).values
+                try:
+                    z = np.polyfit(x, y, 2)
+                    p = np.poly1d(z)
+                    x_trend = np.linspace(x.min(), x.max(), 100)
+                    ax.plot(x_trend, p(x_trend), "r-", alpha=0.5, linewidth=2, label='Trend (Quad)')
+                    trend_plotted = True
+                except np.linalg.LinAlgError:
+                    pass
+            if not trend_plotted and len(df_fit) >= 2 and df_fit['n_combinations_selected'].nunique() >= 2:
+                x = df_fit['n_combinations_selected'].astype(float).values
+                y = df_fit[metric].astype(float).values
+                try:
+                    z = np.polyfit(x, y, 1)
+                    p = np.poly1d(z)
+                    x_trend = np.linspace(x.min(), x.max(), 100)
+                    ax.plot(x_trend, p(x_trend), "r--", alpha=0.5, linewidth=2, label='Trend (Lin)')
+                    trend_plotted = True
+                except np.linalg.LinAlgError:
+                    pass
 
             # Highlight best and baseline
             best_idx = df_results[metric].idxmax()
@@ -1167,7 +1373,52 @@ def main(max_configs=None):
         plt.savefig(summary_viz_dir / "metrics_correlation_matrix.png", dpi=300, bbox_inches='tight')
         plt.close()
 
-    print(f"\n✅ All summary visualizations saved to: {summary_viz_dir}")
+    print(f"\n[SUCCESS] All summary visualizations saved to: {summary_viz_dir}")
+
+    # ========================================================================
+    # Aggregate and save object-wise metrics across all configs/runs
+    # ========================================================================
+    if all_object_metrics:
+        all_obj_df = pd.DataFrame(all_object_metrics)
+        # Raw aggregated object-wise metrics
+        all_obj_csv = analysis_summary_dir / "all_object_metrics_across_configs.csv"
+        all_obj_df.to_csv(all_obj_csv, index=False)
+
+        # Per-config aggregation
+        per_config_summary = all_obj_df.groupby('config_name').agg(
+            mean_object_accuracy=('accuracy', 'mean'),
+            std_object_accuracy=('accuracy', 'std'),
+            n_objects=('object_id', 'count')
+        ).reset_index()
+        per_config_csv = analysis_summary_dir / "per_config_object_metrics_summary.csv"
+        per_config_summary.to_csv(per_config_csv, index=False)
+
+        # Full-dataset aggregation (unweighted and pixel-weighted)
+        full_mean_unweighted = all_obj_df['accuracy'].mean()
+        full_std_unweighted = all_obj_df['accuracy'].std()
+
+        if 'num_pixels' in all_obj_df.columns and all_obj_df['num_pixels'].sum() > 0:
+            weights = all_obj_df['num_pixels'] / all_obj_df['num_pixels'].sum()
+            try:
+                full_mean_weighted = np.average(all_obj_df['accuracy'], weights=weights)
+            except ZeroDivisionError:
+                full_mean_weighted = np.nan
+        else:
+            full_mean_weighted = np.nan
+
+        full_summary = pd.DataFrame([{
+            'mean_object_accuracy_unweighted': full_mean_unweighted,
+            'std_object_accuracy_unweighted': full_std_unweighted,
+            'mean_object_accuracy_weighted_by_pixels': full_mean_weighted,
+            'n_total_objects': len(all_obj_df)
+        }])
+        full_summary_csv = analysis_summary_dir / "full_dataset_object_metrics_summary.csv"
+        full_summary.to_csv(full_summary_csv, index=False)
+
+        print("\nObject-wise aggregation saved:")
+        print(f"  All objects raw: {all_obj_csv}")
+        print(f"  Per-config summary: {per_config_csv}")
+        print(f"  Full dataset summary: {full_summary_csv}")
 
     # Print summary
     print("\n" + "=" * 80)
@@ -1187,6 +1438,8 @@ def main(max_configs=None):
         print(f"  Best F1 score: {df_results['f1_weighted'].max():.4f}")
         print(f"  Max data reduction: {df_results['data_reduction_pct'].max():.1f}%")
         print(f"  Configurations tested: {len(df_results)}")
+
+
 
 
 if __name__ == "__main__":
