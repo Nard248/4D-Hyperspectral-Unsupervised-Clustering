@@ -181,7 +181,7 @@ def train_with_masking(
 
     # Learning rate scheduler
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode='min', factor=0.5, patience=scheduler_patience, verbose=True
+        optimizer, mode='min', factor=0.5, patience=scheduler_patience
     )
 
     # Get all processed data
