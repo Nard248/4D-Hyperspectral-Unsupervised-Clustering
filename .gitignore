@@ -23,7 +23,7 @@ coverage.json
 # Generated results and outputs
 *.pth
 results/
-Data/
+/Data/          # anchored to repo root: the top-level datasets dir, NOT src/spectraforge/data/
 masks/
 model_output/
 visualizations/

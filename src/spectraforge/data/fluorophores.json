@@ -1,0 +1,14 @@
+[
+  {"name": "collagen",    "ex_peak_nm": 340, "ex_fwhm_nm": 60, "em_peak_nm": 390, "em_fwhm_nm": 70,  "quantum_yield": 0.05, "extinction": 0.3},
+  {"name": "elastin",     "ex_peak_nm": 360, "ex_fwhm_nm": 60, "em_peak_nm": 420, "em_fwhm_nm": 70,  "quantum_yield": 0.05, "extinction": 0.3},
+  {"name": "NADH",        "ex_peak_nm": 340, "ex_fwhm_nm": 55, "em_peak_nm": 460, "em_fwhm_nm": 95,  "quantum_yield": 0.02, "extinction": 0.4},
+  {"name": "FAD",         "ex_peak_nm": 450, "ex_fwhm_nm": 55, "em_peak_nm": 530, "em_fwhm_nm": 80,  "quantum_yield": 0.03, "extinction": 0.5},
+  {"name": "lipofuscin",  "ex_peak_nm": 410, "ex_fwhm_nm": 80, "em_peak_nm": 600, "em_fwhm_nm": 110, "quantum_yield": 0.10, "extinction": 0.4},
+  {"name": "porphyrin",   "ex_peak_nm": 405, "ex_fwhm_nm": 35, "em_peak_nm": 635, "em_fwhm_nm": 30,  "quantum_yield": 0.10, "extinction": 0.6},
+  {"name": "DAPI",        "ex_peak_nm": 358, "ex_fwhm_nm": 55, "em_peak_nm": 461, "em_fwhm_nm": 60,  "quantum_yield": 0.30, "extinction": 0.7},
+  {"name": "EBFP2",       "ex_peak_nm": 383, "ex_fwhm_nm": 45, "em_peak_nm": 448, "em_fwhm_nm": 50,  "quantum_yield": 0.56, "extinction": 0.8},
+  {"name": "EGFP",        "ex_peak_nm": 488, "ex_fwhm_nm": 40, "em_peak_nm": 507, "em_fwhm_nm": 35,  "quantum_yield": 0.60, "extinction": 1.0},
+  {"name": "fluorescein", "ex_peak_nm": 494, "ex_fwhm_nm": 35, "em_peak_nm": 512, "em_fwhm_nm": 35,  "quantum_yield": 0.90, "extinction": 1.0},
+  {"name": "mCherry",     "ex_peak_nm": 587, "ex_fwhm_nm": 40, "em_peak_nm": 610, "em_fwhm_nm": 45,  "quantum_yield": 0.22, "extinction": 0.9},
+  {"name": "mKate2",      "ex_peak_nm": 588, "ex_fwhm_nm": 45, "em_peak_nm": 633, "em_fwhm_nm": 50,  "quantum_yield": 0.40, "extinction": 0.8}
+]
