@@ -15,6 +15,7 @@ behaves degenerately on synthetic data, and (3) the **plan + runbook** for the n
 | [`03-architecture-plan.md`](03-architecture-plan.md) | How to proceed: a research-grounded **ladder of candidate architectures/objectives (C0–C4)** designed so the AE cannot cheat, and the fitness/acceptance protocol. | Whoever designs/reviews the next phase. |
 | [`04-training-runbook.md`](04-training-runbook.md) | **The executable handoff.** Exact environment, commands, the model interface contract, per-candidate build specs, smoke-test criteria, and the synthetic-gate / real-accept training+comparison protocol. Written so another machine's **Claude Code agent** can implement and run it. | The agent/operator on the training machine. |
 | [`05-training-results.md`](05-training-results.md) | **The report-back.** The C0–C4 ladder built, unit-tested, and trained on synthetic ME-HSI: full comparison tables, the synthetic-gate verdict (**C3 + C4 pass**), C3/C4 hyperparameter ablations, and why real-data acceptance is still pending. | Anyone reviewing the outcome. |
+| [`06-photophysics-and-realistic-simulation.md`](06-photophysics-and-realistic-simulation.md) | **The photophysics + a realistic regime.** From electronic transitions (Jablonski/Kasha/Franck–Condon) to the trilinear EEM model, the confounds that decouple variance from informativeness (scatter, nuisances, shot noise, dim/overlap), and a benchmark where the learned AE finally **beats the trivial variance baseline** (0.43 vs 0.34). | Anyone extending the simulator. |
 
 ## One-paragraph summary of where we are
 
