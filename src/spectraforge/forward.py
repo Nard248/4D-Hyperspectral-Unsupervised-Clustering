@@ -8,13 +8,17 @@ from spectral_select.types import ExcitationData, SpectraData
 from spectraforge.groundtruth import GroundTruth
 
 
-def render(scene, library, acquisition, artifacts=None, physics=None, seed=None, sample_name="synthetic"):
+def render(scene, library, acquisition, artifacts=None, physics=None, seed=None, sample_name="synthetic",
+           scatter_field=None):
     """Render a synthetic ME-HSI dataset.
 
     Returns ``(SpectraData, GroundTruth)``. With ``artifacts=None`` and ``physics`` off the result
     is the clean, exactly-linear forward model: ``render(A+B) == render(A)+render(B)``. Pass a
     ``PhysicsConfig`` to add optical PSF blur, Beer-Lambert inner-filter (nonlinear), or
     autofluorescence — see :mod:`spectraforge.physics`.
+
+    ``scatter_field`` is an optional (H, W) turbidity/reflectance map; Rayleigh/Raman scatter scales
+    with it per pixel (spatially-varying, high-variance, no chemical information).
     """
     conc = scene.resolve()                       # {fname: (H, W)}
     h, w = scene.height, scene.width
@@ -51,7 +55,7 @@ def render(scene, library, acquisition, artifacts=None, physics=None, seed=None,
         if artifacts is not None:
             from spectraforge.artifacts import add_noise, add_scatter_lines
 
-            add_scatter_lines(cube, ex, em, artifacts, scale)
+            add_scatter_lines(cube, ex, em, artifacts, scale, reflectance=scatter_field)
             cube = add_noise(cube, artifacts, rng)
         excitations[float(ex)] = ExcitationData(
             cube=cube,

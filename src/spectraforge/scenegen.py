@@ -33,6 +33,34 @@ def random_scene(materials, height: int, width: int, seed: int) -> Scene:
     return scene
 
 
+def make_confounded_scene(disc_materials, nuisance_materials, height: int, width: int, seed: int,
+                          *, disc_amp: float = 1.0, nuisance_amp: float = 1.0, turbidity_amp: float = 1.0):
+    """A LABELLED scene where band variance is deliberately DECOUPLED from informativeness.
+
+    - ``disc_materials`` (the *discriminative* components — meant to be dim and/or spectrally
+      overlapping) define the per-pixel class label (argmax of their i.i.d. concentration fields).
+    - ``nuisance_materials`` (meant to be *bright* autofluorophores) get their own independent
+      concentration fields — large spatial variance but **class-irrelevant**.
+    - a ``scatter_field`` (turbidity) is returned to drive spatially-varying Rayleigh/Raman scatter —
+      also high-variance, class-irrelevant.
+
+    So the highest-variance bands (bright nuisances + scatter) carry no class information, while the
+    discriminative signal sits in dim/overlapping (low-variance) bands. Returns
+    ``(Scene, labels, scatter_field)``.
+    """
+    disc_fields = np.stack([random_field(height, width, seed * 13 + 31 * k)
+                            for k in range(len(disc_materials))])
+    labels = disc_fields.argmax(axis=0).astype(int)
+    scene = Scene(height, width)
+    for k, material in enumerate(disc_materials):
+        scene.paint_map(material, disc_fields[k] * disc_amp)
+    for j, material in enumerate(nuisance_materials):                       # class-irrelevant, own seeds
+        field = random_field(height, width, seed * 271 + 17 * j + 9999)
+        scene.paint_map(material, field * nuisance_amp)
+    scatter_field = random_field(height, width, seed * 733 + 4242) * turbidity_amp
+    return scene, labels, scatter_field
+
+
 def make_labeled_scene(materials, height: int, width: int, seed: int):
     """A LABELLED, balanced scene for classification experiments.
 
