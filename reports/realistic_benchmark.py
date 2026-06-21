@@ -53,15 +53,19 @@ NUIS = {
 LIB = {**DISC, **NUIS}
 
 
-def build_dataset(seed):
+def build_dataset(seed, *, disc_amp=1.0, nuisance_amp=2.0, turbidity_amp=1.0,
+                  rayleigh=0.5, raman=0.4, photon_scale=600, read_sigma=0.005, size=64):
+    """Render one confounded scene. All confound strengths are overridable for sweeps; the defaults
+    reproduce the headline realistic regime (doc 06). ``nuisance_amp=0, turbidity_amp=0, rayleigh=0,
+    raman=0`` recovers a clean (variance≈informativeness) regime for the phase-diagram endpoints."""
     acq = AcquisitionConfig(excitations=EXCITATIONS, em_min=420, em_max=700, em_step=5)
     disc_mats = [Material(n, {n: 1.0}) for n in DISC]
     nuis_mats = [Material(n, {n: 1.0}) for n in NUIS]
     scene, labels, scatter = make_confounded_scene(
-        disc_mats, nuis_mats, 64, 64, seed,
-        disc_amp=1.0, nuisance_amp=2.0, turbidity_amp=1.0)
-    artifacts = ArtifactConfig(rayleigh_strength=0.5, raman_strength=0.4, second_order=True,
-                               photon_scale=600, read_sigma=0.005)
+        disc_mats, nuis_mats, size, size, seed,
+        disc_amp=disc_amp, nuisance_amp=nuisance_amp, turbidity_amp=turbidity_amp)
+    artifacts = ArtifactConfig(rayleigh_strength=rayleigh, raman_strength=raman, second_order=True,
+                               photon_scale=photon_scale, read_sigma=read_sigma)
     physics = PhysicsConfig(psf_sigma_px=1.0)
     spectra, gt = render(scene, LIB, acq, artifacts=artifacts, physics=physics,
                          seed=seed, scatter_field=scatter)

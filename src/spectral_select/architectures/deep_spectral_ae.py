@@ -63,3 +63,27 @@ class DeepSpectralAE(SpectralSelector):
 
     def _loss(self, model, Xt, gen):
         return ((model.decode(model.encode(Xt)) - Xt) ** 2).mean()
+
+
+class DeepMaskedSpectralAE(DeepSpectralAE):
+    """C5b: the enlarged deep MLP **with denoising band masking** — the controlled test of whether the
+    masking *objective* rescues the over-capacity failure of C5 (which reconstructs best but selects
+    worst). If C5b >> C5, the objective (not the size) is what governs selection quality."""
+
+    name = "C5b deep-masked-AE"
+    mask_ratio = 0.5
+    masked_loss_weight = 3.0
+
+    def __init__(self, *, mask_ratio=None, masked_loss_weight=None, **kw):
+        super().__init__(**kw)
+        if mask_ratio is not None:
+            self.mask_ratio = float(mask_ratio)
+        if masked_loss_weight is not None:
+            self.masked_loss_weight = float(masked_loss_weight)
+
+    def _loss(self, model, Xt, gen):
+        mask = torch.rand(Xt.shape, generator=gen, device=Xt.device) < self.mask_ratio
+        recon = model.decode(model.encode(Xt.masked_fill(mask, 0.0)))
+        se = (recon - Xt) ** 2
+        weight = torch.ones_like(se) + (self.masked_loss_weight - 1.0) * mask.float()
+        return (se * weight).mean()

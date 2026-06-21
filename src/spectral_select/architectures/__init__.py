@@ -13,7 +13,7 @@ from .base import AnalyzerBackedSelector, BandSelectorModel, SpectralSelector, d
 from .cae_baseline import DeepCAE, StandardCAE
 from .conv_spectral_ae import ConvSpectralAE, MaskedConvSpectralAE
 from .deep_cae import DeepSpectralCAE
-from .deep_spectral_ae import DeepSpectralAE
+from .deep_spectral_ae import DeepMaskedSpectralAE, DeepSpectralAE
 from .masked_spectral_ae import MaskedSpectralAE
 from .spectral_ae import SpectralAE
 from .variational_spectral_ae import VariationalSpectralAE
@@ -31,6 +31,7 @@ CANDIDATES = {
 # registry so the C0..C4 ladder semantics are unchanged.
 LARGE_CANDIDATES = {
     "C5": DeepSpectralAE,
+    "C5b": DeepMaskedSpectralAE,
     "C6": ConvSpectralAE,
     "C7": MaskedConvSpectralAE,
 }
@@ -39,6 +40,6 @@ __all__ = [
     "BandSelectorModel", "SpectralSelector", "AnalyzerBackedSelector",
     "StandardCAE", "DeepCAE", "DeepSpectralCAE",
     "SpectralAE", "MaskedSpectralAE", "VariationalSpectralAE",
-    "DeepSpectralAE", "ConvSpectralAE", "MaskedConvSpectralAE",
+    "DeepSpectralAE", "DeepMaskedSpectralAE", "ConvSpectralAE", "MaskedConvSpectralAE",
     "CANDIDATES", "LARGE_CANDIDATES", "feature_matrix", "diverse_topk",
 ]

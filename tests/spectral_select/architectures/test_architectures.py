@@ -12,8 +12,9 @@ import pytest
 import torch
 
 from spectral_select.architectures import (
-    CANDIDATES, LARGE_CANDIDATES, ConvSpectralAE, DeepSpectralAE, DeepSpectralCAE,
-    MaskedConvSpectralAE, MaskedSpectralAE, SpectralAE, VariationalSpectralAE, diverse_topk,
+    CANDIDATES, LARGE_CANDIDATES, ConvSpectralAE, DeepMaskedSpectralAE, DeepSpectralAE,
+    DeepSpectralCAE, MaskedConvSpectralAE, MaskedSpectralAE, SpectralAE, VariationalSpectralAE,
+    diverse_topk,
 )
 from spectral_select.architectures.spectral_ae import _SpectralMLP
 from spectral_select.architectures.variational_spectral_ae import _SpectralVAE
@@ -140,10 +141,10 @@ def test_candidate_registry_has_ladder():
 
 
 def test_large_registry():
-    assert list(LARGE_CANDIDATES) == ["C5", "C6", "C7"]
+    assert list(LARGE_CANDIDATES) == ["C5", "C5b", "C6", "C7"]
 
 
-@pytest.mark.parametrize("Cls", [DeepSpectralAE, ConvSpectralAE, MaskedConvSpectralAE])
+@pytest.mark.parametrize("Cls", [DeepSpectralAE, DeepMaskedSpectralAE, ConvSpectralAE, MaskedConvSpectralAE])
 def test_enlarged_candidate_fit_select(tiny_spectra, Cls):
     # enhanced training path (minibatch + AdamW + cosine + early stopping), short for the test
     model = Cls(epochs=5, latent_dim=4, batch_size=16, patience=None, seed=0).fit(tiny_spectra)
