@@ -111,14 +111,32 @@ class SpectralSelector(BandSelectorModel):
     epochs = 300
     lr = 1e-3
 
+    # opt-in training tricks (defaults reproduce the original full-batch Adam loop exactly)
+    batch_size = None        # None -> full batch
+    weight_decay = 0.0       # >0 -> AdamW
+    scheduler = None         # None | "cosine"
+    patience = None          # None -> no early stopping; else stop after N epochs w/o improvement
+    grad_clip = None         # None | float (max grad norm)
+
     def __init__(self, *, latent_dim=None, epochs=None, lr=None, seed=0, device="cpu",
-                 n_important=None):
+                 n_important=None, batch_size=None, weight_decay=None, scheduler=None,
+                 patience=None, grad_clip=None):
         if latent_dim is not None:
             self.latent_dim = latent_dim
         if epochs is not None:
             self.epochs = epochs
         if lr is not None:
             self.lr = lr
+        if batch_size is not None:
+            self.batch_size = batch_size
+        if weight_decay is not None:
+            self.weight_decay = weight_decay
+        if scheduler is not None:
+            self.scheduler = scheduler
+        if patience is not None:
+            self.patience = patience
+        if grad_clip is not None:
+            self.grad_clip = grad_clip
         self.seed = int(seed)
         self.device = device
         self.n_important = n_important  # None -> perturb every latent dim
@@ -148,13 +166,7 @@ class SpectralSelector(BandSelectorModel):
         self.d = Xt.shape[1]
 
         model = self._make_module(self.d).to(self.device)
-        opt = torch.optim.Adam(model.parameters(), self.lr)
-        model.train()
-        for _ in range(self.epochs):
-            opt.zero_grad()
-            loss = self._loss(model, Xt, gen)
-            loss.backward()
-            opt.step()
+        self._train(model, Xt, gen)
         model.eval()
 
         self.model = model
@@ -164,6 +176,56 @@ class SpectralSelector(BandSelectorModel):
             self._Xt = Xt
         self._infl_cache = None
         return self
+
+    def _train(self, model, Xt, gen):
+        """Train ``model`` on ``Xt``. With all training knobs at their defaults this is the original
+        full-batch Adam loop (byte-identical for C2/C3/C4); set ``batch_size``/``weight_decay``/
+        ``scheduler``/``patience`` to enable minibatch SGD + AdamW + cosine LR + early stopping."""
+        default = (self.batch_size is None and self.weight_decay == 0.0
+                   and self.scheduler is None and self.patience is None and self.grad_clip is None)
+        if default:
+            opt = torch.optim.Adam(model.parameters(), self.lr)
+            model.train()
+            for _ in range(self.epochs):
+                opt.zero_grad()
+                loss = self._loss(model, Xt, gen)
+                loss.backward()
+                opt.step()
+            return
+
+        opt = (torch.optim.AdamW(model.parameters(), self.lr, weight_decay=self.weight_decay)
+               if self.weight_decay > 0 else torch.optim.Adam(model.parameters(), self.lr))
+        sched = (torch.optim.lr_scheduler.CosineAnnealingLR(opt, self.epochs)
+                 if self.scheduler == "cosine" else None)
+        n = Xt.shape[0]
+        bs = self.batch_size or n
+        best, best_state, bad = float("inf"), None, 0
+        model.train()
+        for _ in range(self.epochs):
+            perm = torch.randperm(n, generator=gen, device=Xt.device)
+            running = 0.0
+            for i in range(0, n, bs):
+                idx = perm[i:i + bs]
+                opt.zero_grad()
+                loss = self._loss(model, Xt[idx], gen)
+                loss.backward()
+                if self.grad_clip:
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), self.grad_clip)
+                opt.step()
+                running += float(loss.item()) * len(idx)
+            if sched is not None:
+                sched.step()
+            if self.patience is not None:
+                epoch_loss = running / n
+                if epoch_loss < best - 1e-5:
+                    best, bad = epoch_loss, 0
+                    best_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
+                else:
+                    bad += 1
+                    if bad >= self.patience:
+                        break
+        if best_state is not None:
+            model.load_state_dict(best_state)
 
     def _band_influence(self) -> np.ndarray:
         if self._infl_cache is not None:

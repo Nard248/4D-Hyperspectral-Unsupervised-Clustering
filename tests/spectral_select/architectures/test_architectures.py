@@ -12,7 +12,8 @@ import pytest
 import torch
 
 from spectral_select.architectures import (
-    CANDIDATES, DeepSpectralCAE, MaskedSpectralAE, SpectralAE, VariationalSpectralAE, diverse_topk,
+    CANDIDATES, LARGE_CANDIDATES, ConvSpectralAE, DeepSpectralAE, DeepSpectralCAE,
+    MaskedConvSpectralAE, MaskedSpectralAE, SpectralAE, VariationalSpectralAE, diverse_topk,
 )
 from spectral_select.architectures.spectral_ae import _SpectralMLP
 from spectral_select.architectures.variational_spectral_ae import _SpectralVAE
@@ -136,6 +137,35 @@ def test_variational_active_units_is_int(tiny_spectra):
 
 def test_candidate_registry_has_ladder():
     assert list(CANDIDATES) == ["C0", "C1", "C2", "C3", "C4"]
+
+
+def test_large_registry():
+    assert list(LARGE_CANDIDATES) == ["C5", "C6", "C7"]
+
+
+@pytest.mark.parametrize("Cls", [DeepSpectralAE, ConvSpectralAE, MaskedConvSpectralAE])
+def test_enlarged_candidate_fit_select(tiny_spectra, Cls):
+    # enhanced training path (minibatch + AdamW + cosine + early stopping), short for the test
+    model = Cls(epochs=5, latent_dim=4, batch_size=16, patience=None, seed=0).fit(tiny_spectra)
+    bands = model.select(4)
+    _valid_bands(tiny_spectra, bands, 4)
+    assert np.isfinite(model.reconstruction_r())
+    assert np.isfinite(model.influence_signal_corr())
+
+
+def test_conv_ae_requires_uniform_band_count():
+    # ragged emission counts across excitations -> ConvSpectralAE can't reshape to (n_ex, n_band)
+    from spectral_select.architectures.conv_spectral_ae import _ConvAE
+    m = _ConvAE(n_ex=2, n_band=10, latent=4)
+    z = m.encode(torch.zeros(3, 20))
+    assert z.shape == (3, 4)
+    assert m.decode(z).shape == (3, 20)
+
+
+def test_default_training_path_unchanged_by_knobs():
+    # SpectralAE (C2) leaves all training knobs at default -> original full-batch path
+    m = SpectralAE(epochs=3, latent_dim=4, seed=0)
+    assert m.batch_size is None and m.weight_decay == 0.0 and m.scheduler is None and m.patience is None
 
 
 # --------------------------------------------------------------------------------------------------
