@@ -201,6 +201,8 @@ def train_with_masking(
     train_losses = []
     best_loss = float('inf')
     best_epoch = 0
+    best_model_path = None  # set when a best epoch is saved; guards the reload below
+    nan_warned = False
 
     # Early stopping counter
     no_improvement_count = 0
@@ -294,12 +296,15 @@ def train_with_masking(
                 spatial_mask=mask_batch
             )
 
-            # Compute sparsity loss
-            encoded = model.encode(batch)
-            sparsity_loss = model.compute_sparsity_loss(encoded)
-
-            # Total loss
-            loss = recon_loss + model.sparsity_weight * sparsity_loss
+            # Compute sparsity loss only when it is actually used. The sparsity KL assumes a
+            # sigmoid-bounded latent in (0,1); for relu/gelu latents it returns NaN, and since
+            # `0.0 * NaN == NaN` this would poison the loss even when sparsity_weight == 0.
+            if model.sparsity_weight > 0:
+                sparsity_loss = model.compute_sparsity_loss(model.encode(batch))
+                loss = recon_loss + model.sparsity_weight * sparsity_loss
+            else:
+                sparsity_loss = torch.zeros((), device=recon_loss.device)
+                loss = recon_loss
 
             # Backward pass and optimize
             optimizer.zero_grad()
@@ -369,8 +374,12 @@ def train_with_masking(
     torch.save(model.state_dict(), final_model_path)
     print(f"Final model saved to {final_model_path}")
 
-    # Load the best model
-    model.load_state_dict(torch.load(best_model_path))
+    # Load the best model (fall back to the final model if no epoch ever improved, e.g. a NaN/diverged
+    # loss — previously this raised UnboundLocalError on best_model_path).
+    if best_model_path is not None:
+        model.load_state_dict(torch.load(best_model_path))
+    else:
+        print("WARNING: no best epoch recorded (loss never improved — diverged/NaN?); keeping final model")
 
     # Save loss values
     np.save(os.path.join(output_dir, "training_losses.npy"), np.array(train_losses))
