@@ -24,6 +24,26 @@ def _std(X):
     return (X - X.mean(0)) / (X.std(0) + 1e-9)
 
 
+def _prep(X, colmap, mode):
+    """Per-pixel preprocessing to suppress nuisances before selection (indices preserved):
+    l2 = remove brightness magnitude (shape only); snv = standard-normal-variate; deriv = per-excitation
+    first derivative (kills broad smooth backgrounds)."""
+    if mode in (None, "none"):
+        return X
+    if mode == "l2":
+        return X / (np.linalg.norm(X, axis=1, keepdims=True) + 1e-9)
+    if mode == "snv":
+        return (X - X.mean(1, keepdims=True)) / (X.std(1, keepdims=True) + 1e-9)
+    if mode == "deriv":
+        ex = np.array([e for e, _ in colmap])
+        out = np.zeros_like(X, dtype=float)
+        for e in np.unique(ex):
+            idx = np.where(ex == e)[0]
+            out[:, idx] = np.gradient(X[:, idx], axis=1) if len(idx) > 1 else X[:, idx]
+        return out
+    raise ValueError(f"unknown prep {mode}")
+
+
 # ---- statistical -------------------------------------------------------------------------------
 def variance(X, colmap, n, seed, rng, spectra=None):
     return topn_diverse(X.var(0), colmap, n)
@@ -57,10 +77,11 @@ def derivative_energy(X, colmap, n, seed, rng, spectra=None):
 
 
 # ---- decompositions ----------------------------------------------------------------------------
-def pca_load(X, colmap, n, seed, rng, spectra=None, k=10, weighted=False):
+def pca_load(X, colmap, n, seed, rng, spectra=None, k=10, weighted=False, prep="none"):
     from sklearn.decomposition import PCA
-    k = int(min(k, X.shape[1], X.shape[0] - 1))
-    p = PCA(n_components=k, random_state=seed).fit(_std(X))
+    Xp = _prep(X, colmap, prep)
+    k = int(min(k, Xp.shape[1], Xp.shape[0] - 1))
+    p = PCA(n_components=k, random_state=seed).fit(_std(Xp))
     w = p.explained_variance_ratio_[:, None] if weighted else 1.0
     return topn_diverse(np.sum(np.abs(p.components_) * w, axis=0), colmap, n)
 
