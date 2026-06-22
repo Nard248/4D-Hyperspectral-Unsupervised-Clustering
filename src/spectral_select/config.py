@@ -159,6 +159,8 @@ class Config:
     model_sparsity_target: float = 0.1  # Target sparsity for regularization
     model_sparsity_weight: float = 1.0  # Weight of sparsity loss term
     model_dropout_rate: float = 0.5  # Dropout probability during training
+    model_hidden_activation: str = "sigmoid"  # hidden activation; "relu" fixes vanishing-gradient stall
+    model_output_activation: str = "sigmoid"  # output activation ("identity"=linear)
 
     # Training parameters
     training_epochs: int = 30  # Number of training epochs for autoencoder

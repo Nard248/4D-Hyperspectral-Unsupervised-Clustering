@@ -672,6 +672,8 @@ class Analyzer:
                     sparsity_target=self._config.model_sparsity_target,
                     sparsity_weight=self._config.model_sparsity_weight,
                     dropout_rate=self._config.model_dropout_rate,
+                    hidden_activation=self._config.model_hidden_activation,
+                    output_activation=self._config.model_output_activation,
                 )
             else:
                 raise ValueError(f"Unknown built-in autoencoder: {architecture}")

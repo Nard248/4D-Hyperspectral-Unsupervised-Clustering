@@ -25,7 +25,9 @@ class HyperspectralCAEWithMasking(nn.Module):
             sparsity_target: float = 0.1,
             sparsity_weight: float = 1.0,
             dropout_rate: float = 0.5,
-            debug: bool = False
+            debug: bool = False,
+            hidden_activation: str = "sigmoid",
+            output_activation: str = "sigmoid",
     ):
         """
         Initialize the Improved Hyperspectral Convolutional Autoencoder.
@@ -41,6 +43,21 @@ class HyperspectralCAEWithMasking(nn.Module):
             debug: Whether to print debug information
         """
         super(HyperspectralCAEWithMasking, self).__init__()
+
+        # Activation selection. The published default is "sigmoid" everywhere; but THREE stacked
+        # hidden sigmoids cause vanishing gradients and the model gets stuck near its constant init
+        # (it never learns to reconstruct). Set hidden_activation="relu" to fix trainability while
+        # keeping the exact same architecture (convs, band-collapse, per-excitation branches).
+        _ACTS = {
+            "sigmoid": torch.sigmoid, "relu": F.relu, "leaky_relu": F.leaky_relu,
+            "gelu": F.gelu, "tanh": torch.tanh, "identity": (lambda t: t),
+        }
+        if hidden_activation not in _ACTS or output_activation not in _ACTS:
+            raise ValueError(f"activation must be one of {sorted(_ACTS)}")
+        self._hidden_act = _ACTS[hidden_activation]
+        self._output_act = _ACTS[output_activation]
+        self.hidden_activation = hidden_activation
+        self.output_activation = output_activation
 
         self.excitation_wavelengths = sorted(list(excitations_data.keys()))
         self.num_excitations = len(self.excitation_wavelengths)
@@ -150,7 +167,7 @@ class HyperspectralCAEWithMasking(nn.Module):
             # Apply first convolution (using sanitized key)
             key = self.ex_to_key[ex]
             x = self.enc_conv1[key](x)
-            x = F.sigmoid(x)  # Using sigmoid activation for [0,1] data
+            x = self._hidden_act(x)  # hidden activation (see __init__: sigmoid published / relu fix)
 
             if self.debug:
                 print(f"After enc_conv1 for ex={ex}: {x.shape}")
@@ -180,7 +197,7 @@ class HyperspectralCAEWithMasking(nn.Module):
 
         # Apply third layer convolution
         encoded = self.enc_conv3(mean_features)
-        encoded = F.sigmoid(encoded)  # Using sigmoid activation
+        encoded = self._hidden_act(encoded)  # latent hidden activation
 
         if self.debug:
             print(f"Encoded: {encoded.shape}")
@@ -205,7 +222,7 @@ class HyperspectralCAEWithMasking(nn.Module):
 
         # First decoding layer
         x = self.dec_conv1(encoded)
-        x = F.sigmoid(x)  # Using sigmoid activation
+        x = self._hidden_act(x)  # hidden activation
 
         if self.debug:
             print(f"After dec_conv1: {x.shape}")
@@ -224,8 +241,8 @@ class HyperspectralCAEWithMasking(nn.Module):
             if self.debug:
                 print(f"After dec_conv2 for ex={ex}: {recon.shape}")
 
-            # Apply activation
-            recon = F.sigmoid(recon)  # Using sigmoid activation
+            # Apply output activation (sigmoid published; "identity"/linear often trains better)
+            recon = self._output_act(recon)
 
             # Reshape back to original format [batch, height, width, emission_bands]
             recon = recon.squeeze(2)  # Remove the dimension with size 1
