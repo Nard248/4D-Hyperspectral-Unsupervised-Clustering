@@ -44,25 +44,21 @@ def stage1_configs():
 
 
 def stage2_configs():
-    # realistic was the gap; stage-1 winners on realistic were relu/leaky (not silu). Push deeper +
-    # more epochs, and bring in the CONV backbone (band-locality) which the MLP lacked.
+    # The MLP plateaus ~0.45 on realistic; the CONV backbone (band-locality) is the hope. Conv-focused
+    # swarm at practical epochs. masked + small latent (the winning recipe) emphasized.
     cfgs = {}
-    for act, mask, latent, depth in itertools.product(
-            ["relu", "leaky"], [0.0, 0.5, 0.7], [8, 12], [4, 6]):
-        cfgs[f"mlp a={act} m={mask} L={latent} d={depth}"] = dict(
-            backbone="mlp", act=act, mask_ratio=mask, latent_dim=latent, depth=depth, width=192,
-            epochs=800, weight_decay=1e-5, scheduler="cosine")
-    for act, mask, latent, depth in itertools.product(
-            ["relu", "gelu"], [0.0, 0.5, 0.7], [8, 12], [2, 3]):
-        cfgs[f"conv a={act} m={mask} L={latent} d={depth}"] = dict(
-            backbone="conv", act=act, mask_ratio=mask, latent_dim=latent, depth=depth, width=64,
-            epochs=600, weight_decay=1e-5, scheduler="cosine", batch_size=512)
+    # deeper conv (d=3 beat d=2 on realistic), no-mask, more epochs/width — final push on realistic
+    for act, latent, depth, width in itertools.product(
+            ["relu", "gelu"], [8, 12], [3, 4, 5], [64, 96]):
+        cfgs[f"conv a={act} L={latent} d={depth} w={width}"] = dict(
+            backbone="conv", act=act, mask_ratio=0.0, latent_dim=latent, depth=depth, width=width,
+            epochs=500, weight_decay=1e-5, scheduler="cosine")
     return cfgs
 
 
 def main():
     stage = sys.argv[1] if len(sys.argv) > 1 else "stage1"
-    seeds = (1, 2, 3) if stage == "stage2" else (1, 2)
+    seeds = (1, 2)
     cache = sc.build_cache(REGIMES, seeds)
     pca = sc.score_method(functools.partial(mz.pca_load, k=6), cache, regimes=REGIMES, seeds=seeds)
     oracle = float(np.mean([cache[(g, s)][4] for g in REGIMES for s in seeds]))
