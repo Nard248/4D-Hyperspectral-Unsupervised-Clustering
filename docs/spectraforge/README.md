@@ -6,6 +6,11 @@ behaves degenerately on synthetic data, and (3) the **plan + runbook** for the n
 (trying autoencoder architectures that don't "cheat"), which is intended to be executed and
 **trained on a separate machine**.
 
+> 📕 **Start here for the whole story:** [`FINAL-REPORT.md`](FINAL-REPORT.md) /
+> [`FINAL-REPORT.docx`](FINAL-REPORT.docx) — the complete narrative from chance-level published model
+> to a selector that exceeds the best blind method on clean data. The entire set of docs is also
+> compiled into one Word file: [`COMPLETE-DOSSIER.docx`](COMPLETE-DOSSIER.docx).
+
 ## Read in this order
 
 | Doc | What it covers | For whom |
