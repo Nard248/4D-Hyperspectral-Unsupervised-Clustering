@@ -75,3 +75,29 @@ retains the per-band structure the perturbation reads**, consistent with the bro
 selection quality is not tied to perfect reconstruction. The remaining real-world gate is unchanged:
 validate on the Lichens/Collagen cubes.
 
+## Pushing to match the best known methods (`reports/cae_pushharder.py`)
+
+Target: the best blind selectors — `pca_load[k≈6]` ≈ 0.48 and the labels-using oracle ≈ 0.486.
+With the bug-fixes in place, two AE+perturbation configs (the idea intact) reach near-parity:
+
+| config (AE + perturbation) | clean selF1 | realistic selF1 |
+|----------------------------|------------:|----------------:|
+| published spatial CAE (before) | 0.331 (chance) | 0.33 |
+| band-preserving spatial CAE + tuned selection | **0.438** (90% oracle) | — |
+| **per-pixel collapse-bottleneck conv-AE** | **0.473 ± 0.018** (≈ pca_load, 97% oracle) | **0.418 ± 0.028** |
+| reference: pca_load[k≈6] / oracle | 0.48 / 0.486 | 0.479 / 0.49 |
+
+- **Selection knobs are the lever** (reconstruction fidelity is anti-correlated with selection): on the
+  band-preserving CAE, `dimension_selection="pca"` + `perturbation="standard_deviation"` + more
+  important dims (80) lifted it 0.414 → **0.438**; `"activation"` dim-selection was worst (~0.33).
+- **The per-pixel collapse-bottleneck conv-AE matches the best known method on clean (0.473 ≈ pca_load
+  0.48, 97% of oracle) and is on par with the best learned selectors on realistic (0.418).** A *small*
+  bottleneck (collapse the bands to a compact code) forces the latent onto the dominant/informative
+  structure — the same "bottleneck-as-selector" effect seen in doc 12.
+
+**Conclusion:** once the trainer bugs are fixed and the metric is honest, the AE + latent-perturbation
+method — your idea — goes from chance-level to **matching the best known blind selectors on clean and
+comparable on realistic**, via either a band-preserving spatial CAE (tuned selection) or, best, a
+per-pixel conv-AE with a band-collapse bottleneck. The published spatial-CAE's only fatal element was
+the full band-collapse + the trainer bugs; neither is intrinsic to the method.
+
