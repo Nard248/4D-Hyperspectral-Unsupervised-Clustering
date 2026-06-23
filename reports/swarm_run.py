@@ -44,13 +44,19 @@ def stage1_configs():
 
 
 def stage2_configs():
-    # refined around stage-1 leaders: masked, small-latent, gelu/silu, deeper/wider, more epochs
+    # realistic was the gap; stage-1 winners on realistic were relu/leaky (not silu). Push deeper +
+    # more epochs, and bring in the CONV backbone (band-locality) which the MLP lacked.
     cfgs = {}
-    for act, mask, latent, depth, width, ep in itertools.product(
-            ["gelu", "silu"], [0.4, 0.6, 0.75], [4, 6], [4, 6], [192, 256], [800]):
-        cfgs[f"flex2 a={act} m={mask} L={latent} d={depth} w={width}"] = dict(
-            act=act, mask_ratio=mask, latent_dim=latent, depth=depth, width=width, epochs=ep,
-            weight_decay=1e-5, scheduler="cosine")
+    for act, mask, latent, depth in itertools.product(
+            ["relu", "leaky"], [0.0, 0.5, 0.7], [8, 12], [4, 6]):
+        cfgs[f"mlp a={act} m={mask} L={latent} d={depth}"] = dict(
+            backbone="mlp", act=act, mask_ratio=mask, latent_dim=latent, depth=depth, width=192,
+            epochs=800, weight_decay=1e-5, scheduler="cosine")
+    for act, mask, latent, depth in itertools.product(
+            ["relu", "gelu"], [0.0, 0.5, 0.7], [8, 12], [2, 3]):
+        cfgs[f"conv a={act} m={mask} L={latent} d={depth}"] = dict(
+            backbone="conv", act=act, mask_ratio=mask, latent_dim=latent, depth=depth, width=64,
+            epochs=600, weight_decay=1e-5, scheduler="cosine", batch_size=512)
     return cfgs
 
 

@@ -39,18 +39,51 @@ class _FlexMLP(nn.Module):
         return self.dec(z)
 
 
+class _FlexConv(nn.Module):
+    """1D-conv-over-bands backbone: reshape (B,d) -> (B, n_ex, n_band), conv along the band axis."""
+
+    def __init__(self, n_ex, n_band, latent=8, depth=3, width=64, act="gelu"):
+        super().__init__()
+        A = ACTS[act]
+        self.n_ex, self.n_band = n_ex, n_band
+        enc = [nn.Conv1d(n_ex, width, 7, padding=3), A()]
+        for _ in range(max(0, depth - 1)):
+            enc += [nn.Conv1d(width, width, 3, padding=1), A()]
+        self.enc_conv = nn.Sequential(*enc)
+        self.to_latent = nn.Linear(width * n_band, latent)
+        self.from_latent = nn.Linear(latent, width * n_band)
+        dec = [A()]
+        for _ in range(max(0, depth - 1)):
+            dec += [nn.Conv1d(width, width, 3, padding=1), A()]
+        dec += [nn.Conv1d(width, n_ex, 7, padding=3)]
+        self.dec_conv = nn.Sequential(*dec)
+        self.width = width
+
+    def encode(self, x):
+        b = x.shape[0]
+        return self.to_latent(self.enc_conv(x.view(b, self.n_ex, self.n_band)).reshape(b, -1))
+
+    def decode(self, z):
+        b = z.shape[0]
+        return self.dec_conv(self.from_latent(z).view(b, self.width, self.n_band)).reshape(b, self.n_ex * self.n_band)
+
+
 class FlexSpectralAE(SpectralSelector):
     latent_dim = 8
     epochs = 400
     lr = 1e-3
 
     def __init__(self, *, depth=3, width=128, act="gelu", mask_ratio=0.0, masked_weight=3.0,
-                 dropout=0.0, noise=0.0, **kw):
+                 dropout=0.0, noise=0.0, backbone="mlp", **kw):
         super().__init__(**kw)
-        self.depth, self.width, self.act = depth, width, act
+        self.depth, self.width, self.act, self.backbone = depth, width, act, backbone
         self.mask_ratio, self.masked_weight, self.dropout, self.noise = mask_ratio, masked_weight, dropout, noise
 
     def _make_module(self, d):
+        if self.backbone == "conv":
+            ex = sorted({e for e, _ in self.colmap})
+            n_ex = len(ex); n_band = d // n_ex
+            return _FlexConv(n_ex, n_band, self.latent_dim, self.depth, min(self.width, 64), self.act)
         return _FlexMLP(d, self.latent_dim, self.depth, self.width, self.act, self.dropout)
 
     def _loss(self, model, Xt, gen):
