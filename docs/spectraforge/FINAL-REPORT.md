@@ -372,21 +372,38 @@ Starting point for context: the **published CAE was at chance (0.33)** on both.
 
 ---
 
-## 12. Future work — how to exceed the alternatives by *far* more
+## 12. Trying to exceed by *far* more — the nonlinear test, and the honest ceiling
 
 The realistic regime is saturated **for linear structure**, where PCA is already near-optimal. The
-place an autoencoder *should* win decisively is where the informative structure is **nonlinear** — and
-the photophysics gives us exactly such a regime:
+place an autoencoder *should* win decisively is where the informative structure is **nonlinear** — the
+inner-filter / reabsorption / quenching photophysics. **We tested this hypothesis directly**
+(`reports/nonlinear_regime.py`, doc 15): render the realistic scene, apply per-pixel inner-filter
+attenuation + a saturating quench, and compare blind selectors against both a linear (`f_classif`) and
+a nonlinear (`mutual_info_classif`) oracle.
 
-- **Inner-filter / reabsorption / concentration-quenching regime.** When excitation light is attenuated
-  before reaching the emitter and emission is reabsorbed, the measured signal is a **nonlinear**
-  function of concentration. PCA loadings (a linear basis) must degrade here; a nonlinear autoencoder
-  can model the manifold. **Hypothesis: on a strongly nonlinear EEM regime, the AE + perturbation will
-  exceed `pca_load` by a wide margin** — this is the next experiment.
-- **Trilinear-breaking mixtures / FRET.** Energy transfer between fluorophores breaks the simple
-  trilinear EEM model in a structured, nonlinear way — another regime favouring the AE.
-- **Real-data validation (the outstanding gate).** Validate the winning config on the actual
-  **Lichens** and **Collagen** cubes (data not present on this machine). This is the decisive test.
+**The hypothesis was not supported, and the result is diagnostic:**
+
+- `pca_load` **remained the strongest blind method even under the nonlinearity** (0.460), degrading
+  gracefully; the **AE+perturbation collapsed harder** (0.461 → 0.368), its discriminative-band
+  hit-rate falling to 22%.
+- Both oracles *dropped* and the nonlinear MI-oracle stayed *below* the linear one — so the transform
+  mostly **destroyed** information rather than relocating it into nonlinear structure. It is therefore
+  not a fair test, and the AE's collapse exposes a real weakness: the perturbation ranks bands by
+  **reconstruction influence**, which a bright-nuisance-driven attenuation pattern dominates, so the
+  selector follows the nuisances. **The perturbation method is *more* nuisance-sensitive than PCA.**
+
+**Honest conclusion:** on additive-fluorophore synthetic data both PCA and a reconstruction-AE are
+variance-driven, and PCA selects the spectrally-prominent informative bands near-optimally. "Exceeding
+`pca_load` by far more" is **not supported by the synthetic evidence**, and post-hoc synthetic
+nonlinearities do not test it rigorously. The remaining principled directions:
+
+- **A reabsorption-reshaping renderer** — concentration-dependent self-absorption that relocates
+  discriminative information into band *shape/ratios* while *preserving* total information (so that the
+  nonlinear oracle genuinely exceeds the linear one). This is a **generator change**, not a sweep, and
+  is the only rigorous way to give the nonlinear hypothesis a fair test.
+- **Real-data validation (the decisive gate).** Validate the winning config on the actual **Lichens**
+  and **Collagen** cubes (data not present on this machine), where the true task and real nonlinear
+  photophysics may favour the nonlinear model in ways a fair synthetic proxy has not.
 
 ---
 
