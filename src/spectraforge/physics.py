@@ -45,6 +45,28 @@ def _broadband(em_grid, peak, fwhm):
     return np.exp(-0.5 * ((em_grid - peak) / sigma) ** 2)
 
 
+def apply_fret(contribs, absorbed, conc, library, em_grid, pairs):
+    """In-place Förster resonance energy transfer between fluorophore pairs (a strong nonlinearity).
+
+    For each ``(donor, acceptor, k)``: a *saturating* fraction ``E = k·c_A/(1+k·c_A)`` of the donor's
+    absorbed energy is transferred to the acceptor — the donor emission is **quenched** by ``(1-E)`` and
+    the acceptor gains a **sensitized** emission ``E·absorbed_donor·Φ_A``. Because ``E`` saturates in the
+    acceptor concentration and the sensitized term ``~ c_D·E(c_A)`` is a *product*, this relocates
+    information that lives in dye **co-localization** into the donor/acceptor band ratio — structure a
+    linear basis cannot represent. ``contribs``/``absorbed`` are per-fluorophore (H,W,n_em)/(H,W) maps.
+    """
+    for donor, acceptor, k in pairs:
+        if donor not in contribs or acceptor not in contribs:
+            continue
+        cA = conc[acceptor]
+        E = (k * cA) / (1.0 + k * cA)                            # (H, W) saturating transfer fraction
+        contribs[donor] = contribs[donor] * (1.0 - E)[:, :, None]
+        fA = library[acceptor]
+        sensitized = E * absorbed[donor] * fA.quantum_yield      # (H, W) energy emitted by acceptor
+        contribs[acceptor] = contribs[acceptor] + sensitized[:, :, None] * fA.emission(em_grid)[None, None, :]
+    return contribs
+
+
 def apply_physics(cube, cfg: PhysicsConfig, em_grid, scale, absorbance, em_absorbance=None):
     """Apply (in order) primary inner-filter, reabsorption, autofluorescence, then PSF blur.
 

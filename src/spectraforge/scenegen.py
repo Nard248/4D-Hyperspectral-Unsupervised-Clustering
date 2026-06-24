@@ -61,6 +61,34 @@ def make_confounded_scene(disc_materials, nuisance_materials, height: int, width
     return scene, labels, scatter_field
 
 
+def make_interaction_scene(donor_material, acceptor_material, nuisance_materials, height: int,
+                           width: int, seed: int, *, disc_amp: float = 1.0, nuisance_amp: float = 1.0,
+                           turbidity_amp: float = 1.0):
+    """A scene whose class label lives ENTIRELY in the *interaction* (co-localization) of two dyes.
+
+    Two independent smooth fields drive a donor and an acceptor dye. Each is binarized at its median
+    (b1, b2); the per-pixel class is ``b1 XOR b2`` — so each dye's MARGINAL concentration is
+    class-independent (a linear/single-band test sees nothing) while the JOINT determines the class.
+    Combined with renderer FRET (donor↔acceptor), the discriminative signal is relocated into the
+    donor/acceptor band *ratio* via a nonlinear (saturating, product) coupling: a regime with a large
+    *nonlinear-only* information fraction, where a linear selector (PCA) is at a fundamental
+    disadvantage. Returns ``(Scene, labels, scatter_field)`` like :func:`make_confounded_scene`.
+    """
+    f1 = random_field(height, width, seed * 13 + 31)
+    f2 = random_field(height, width, seed * 13 + 67)
+    b1 = f1 > np.median(f1)
+    b2 = f2 > np.median(f2)
+    labels = (b1 ^ b2).astype(int)
+    scene = Scene(height, width)
+    scene.paint_map(donor_material, f1 * disc_amp)
+    scene.paint_map(acceptor_material, f2 * disc_amp)
+    for j, material in enumerate(nuisance_materials):
+        field = random_field(height, width, seed * 271 + 17 * j + 9999)
+        scene.paint_map(material, field * nuisance_amp)
+    scatter_field = random_field(height, width, seed * 733 + 4242) * turbidity_amp
+    return scene, labels, scatter_field
+
+
 def make_labeled_scene(materials, height: int, width: int, seed: int):
     """A LABELLED, balanced scene for classification experiments.
 

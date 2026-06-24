@@ -9,7 +9,7 @@ from spectraforge.groundtruth import GroundTruth
 
 
 def render(scene, library, acquisition, artifacts=None, physics=None, seed=None, sample_name="synthetic",
-           scatter_field=None):
+           scatter_field=None, fret_pairs=None):
     """Render a synthetic ME-HSI dataset.
 
     Returns ``(SpectraData, GroundTruth)``. With ``artifacts=None`` and ``physics`` off the result
@@ -43,17 +43,25 @@ def render(scene, library, acquisition, artifacts=None, physics=None, seed=None,
             * acquisition.exposure_for(ex)
             * acquisition.power_for(ex)
         )
-        cube = np.zeros((h, w, len(em)), dtype=float)
         absorbance = np.zeros((h, w), dtype=float)        # excitation absorbance (inner-filter)
+        contribs = {}                                     # fname -> (H, W, n_em) per-fluorophore signal
+        absorbed = {}                                     # fname -> (H, W) absorbed excitation energy
         for fname, cmap in conc.items():
             f = library[fname]
             exc = float(f.excitation(ex))
             amp = f.extinction * f.quantum_yield * exc                      # scalar
             em_profile = f.emission(em)                                     # (n_em,)
-            contrib = (cmap * amp)[:, :, None] * em_profile[None, None, :]
+            contribs[fname] = (cmap * amp)[:, :, None] * em_profile[None, None, :]
+            absorbed[fname] = f.extinction * exc * cmap
+            absorbance += absorbed[fname]
+        if fret_pairs:
+            from spectraforge.physics import apply_fret
+
+            apply_fret(contribs, absorbed, conc, library, em, fret_pairs)
+        cube = np.zeros((h, w, len(em)), dtype=float)
+        for fname, contrib in contribs.items():
             cube += contrib
-            absorbance += f.extinction * exc * cmap
-            band_max = contrib.reshape(-1, len(em)).max(axis=0) * scale     # (n_em,)
+            band_max = contrib.reshape(-1, len(em)).max(axis=0) * scale     # (n_em,) post-FRET
             per_fluorophore.setdefault(fname, {})[float(ex)] = band_max
         cube *= scale
         if physics is not None:
