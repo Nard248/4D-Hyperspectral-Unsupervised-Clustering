@@ -369,6 +369,13 @@ Starting point for context: the **published CAE was at chance (0.33)** on both.
    pooled R² / signal-band correlation and the labels-oracle gap told the true story.
 5. **Reconstruction fidelity is anti-correlated with selection quality** — a result worth remembering
    for any perturbation-based selector.
+6. **Band selection ≠ classification (doc 17).** Even on strongly nonlinear data (FRET/XOR), the AE
+   ties `pca_load` for *selection*, because *informative ⟹ has variance ⟹ PCA-selectable*; the
+   nonlinearity is resolved by the downstream classifier, not the selector. The AE's manifold advantage
+   helps representation, not the choice of which bands to keep — so a blind AE selector cannot beat
+   `pca_load` "by far more" on this data class. Verified with a corrected, model-agnostic evaluation
+   (classifier panel + nonlinear-only gap, doc 16) — without which the comparison would itself be
+   biased.
 
 ---
 
@@ -416,14 +423,42 @@ signal is largely linear, so the nonlinear-only information fraction is inherent
 contribution is the **evaluation methodology**, which is the correct way to define and quantify
 selection quality on nonlinear data and is what makes any AE advantage visible and attributable.
 
-### 12.2 Remaining directions
+### 12.2 The decisive nonlinear test: FRET + the selection-vs-classification insight (doc 17)
 
-- **Strongly-nonlinear mixing** (FRET coupling, ground-state depletion/saturation, intimate
-  multiplicative mixtures) — a regime with a *large* nonlinear-only information fraction, where the AE
-  margin could become decisive. A renderer effort, evaluated with the panel metric above.
+We then built the *strongest* honest nonlinear regime: **FRET** in the renderer (donor→acceptor
+transfer) on a scene whose class lives in dye **co-localization (XOR)** — so the information is *purely*
+in the joint and is relocated into a band ratio. This regime is strongly nonlinear: the all-bands
+nonlinear gap is **+0.113** and even the marginal mutual-information oracle *fails* (XOR is invisible
+per-band). The result (4 seeds, fair panel):
+
+| method | best-NL | nonlinear gap |
+|--------|--------:|--------------:|
+| all-bands ceiling | 0.662 | +0.113 |
+| **pca_load** | **0.641 ± 0.011** | +0.091 |
+| **AE+perturb** | **0.633 ± 0.016** | +0.092 |
+
+**They are tied (margin −0.008, within noise)** — and the AE's nonlinear gap matches pca's, so it *does*
+capture the nonlinear structure; it just does not *select* better. The reason is the key insight of the
+whole nonlinear investigation:
+
+> **Band SELECTION ≠ CLASSIFICATION.** "AE beats PCA on nonlinear data" is true for *representation/
+> classification*, but selection is a different task. *Informative ⟹ has variance ⟹ PCA selects it.*
+> The discriminative bands carry concentration-driven variance, so `pca_load` picks them; the
+> nonlinearity (XOR, FRET ratio) is then resolved by the *downstream* nonlinear classifier, not the
+> selector. A nonlinear classification task does not imply a nonlinear selection task — so the AE's
+> manifold advantage buys nothing extra at selection.
+
+The only regime where the AE *could* select better — informative bands that are *not* variance-prominent
+— is also one where the AE's variance-driven perturbation fails (doc 15). So **no blind selector we can
+build exploits nonlinearity to beat `pca_load`**; doing so needs label information (a discriminability/
+wrapper selector), which is a different method, not the blind AE.
+
+### 12.3 Remaining direction
+
 - **Real-data validation (the decisive gate).** Validate the winning config on the actual **Lichens**
-  and **Collagen** cubes (data not present on this machine), where real photophysics may carry far more
-  nonlinear structure than a fair synthetic proxy.
+  and **Collagen** cubes (data not present on this machine), evaluated with the panel metric of doc 16.
+  Real photophysics may place informative structure where it is *not* variance-prominent — the one
+  setting where the synthetic conclusion (AE ≈ pca for selection) could change.
 
 ---
 
