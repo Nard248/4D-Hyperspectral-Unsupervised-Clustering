@@ -55,16 +55,22 @@ LIB = {**DISC, **NUIS}
 
 def build_dataset(seed, *, disc_amp=1.0, nuisance_amp=2.0, turbidity_amp=1.0,
                   rayleigh=0.5, raman=0.4, photon_scale=600, read_sigma=0.005, size=64,
-                  reabsorption=False, reabsorption_strength=2.5):
+                  reabsorption=False, reabsorption_strength=2.5, disc_extinction=None):
     """Render one confounded scene. All confound strengths are overridable for sweeps; the defaults
     reproduce the headline realistic regime (doc 06). ``nuisance_amp=0, turbidity_amp=0, rayleigh=0,
     raman=0`` recovers a clean (variance≈informativeness) regime for the phase-diagram endpoints.
 
     ``reabsorption=True`` turns on the secondary inner-filter (self-absorption) in the renderer — a
     concentration-dependent RESHAPING of each emission band that relocates discriminative information
-    into band shape/ratios (the honest nonlinear regime; see docs 15-16)."""
+    into band shape/ratios (the honest nonlinear regime; see docs 15-16). ``disc_extinction`` (when
+    set) overrides the discriminative dyes' extinction so *their* concentration dominates the
+    reabsorption reshaping — a cleaner nonlinear-DISCRIMINATIVE regime (less nuisance-driven shape)."""
+    import dataclasses
     acq = AcquisitionConfig(excitations=EXCITATIONS, em_min=420, em_max=700, em_step=5)
-    disc_mats = [Material(n, {n: 1.0}) for n in DISC]
+    disc = ({n: dataclasses.replace(f, extinction=disc_extinction) for n, f in DISC.items()}
+            if disc_extinction is not None else DISC)
+    lib = {**disc, **NUIS}
+    disc_mats = [Material(n, {n: 1.0}) for n in disc]
     nuis_mats = [Material(n, {n: 1.0}) for n in NUIS]
     scene, labels, scatter = make_confounded_scene(
         disc_mats, nuis_mats, size, size, seed,
@@ -73,7 +79,7 @@ def build_dataset(seed, *, disc_amp=1.0, nuisance_amp=2.0, turbidity_amp=1.0,
                                photon_scale=photon_scale, read_sigma=read_sigma)
     physics = PhysicsConfig(psf_sigma_px=1.0, reabsorption=reabsorption,
                             reabsorption_strength=reabsorption_strength)
-    spectra, gt = render(scene, LIB, acq, artifacts=artifacts, physics=physics,
+    spectra, gt = render(scene, lib, acq, artifacts=artifacts, physics=physics,
                          seed=seed, scatter_field=scatter)
     return spectra, gt, labels.ravel(), acq
 

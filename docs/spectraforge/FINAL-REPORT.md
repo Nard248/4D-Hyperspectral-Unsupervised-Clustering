@@ -392,18 +392,38 @@ a nonlinear (`mutual_info_classif`) oracle.
   **reconstruction influence**, which a bright-nuisance-driven attenuation pattern dominates, so the
   selector follows the nuisances. **The perturbation method is *more* nuisance-sensitive than PCA.**
 
-**Honest conclusion:** on additive-fluorophore synthetic data both PCA and a reconstruction-AE are
-variance-driven, and PCA selects the spectrally-prominent informative bands near-optimally. "Exceeding
-`pca_load` by far more" is **not supported by the synthetic evidence**, and post-hoc synthetic
-nonlinearities do not test it rigorously. The remaining principled directions:
+### 12.1 The fair nonlinear test: reabsorption + a corrected evaluation (doc 16)
 
-- **A reabsorption-reshaping renderer** — concentration-dependent self-absorption that relocates
-  discriminative information into band *shape/ratios* while *preserving* total information (so that the
-  nonlinear oracle genuinely exceeds the linear one). This is a **generator change**, not a sweep, and
-  is the only rigorous way to give the nonlinear hypothesis a fair test.
+The post-hoc IFE above was *destructive*, not a fair test. So we (a) added **physically-correct
+reabsorption** (secondary inner-filter / self-absorption) to the renderer — concentration-dependent
+band *reshaping* that relocates discriminative information into band shape/ratios while keeping it
+recoverable — and (b) recognised that **the evaluation itself is the crux on nonlinear data**: a linear
+oracle (`f_classif`) and a single KNN both bake in a linear/local bias and *cannot credit* a
+nonlinear-shape selection. The corrected protocol (`reports/reabsorption_eval.py`) scores each subset
+with a **classifier panel** (LogisticRegression → KNN/RandomForest/MLP), cross-validated, reporting
+`linear`, `best-NL` (information an expressive model can extract), and `gap = best-NL − linear` (the
+**nonlinear-only** information). A regime is only a fair nonlinear test if the all-bands `gap > 0`.
+
+**Result (honest):** under reabsorption, with the fair metric, **the AE+perturbation overtakes
+`pca_load`** — best-NL **0.467 vs 0.438** at moderate strength, and its subset carries
+**nonlinear-only information (gap +0.030) that `pca_load`'s does not (−0.021)**, near the mutual-info
+oracle. The AE even selects bands *outside* the nominal discriminative window yet scores higher —
+showing the old `%disc-window` notion of "good" is itself a linear artifact. The margin **crosses from
+negative to positive as the regime becomes nonlinear** (strength sweep), confirming the *direction* of
+the hypothesis. **But the margin is small (≤ ~0.03) and within seed noise — "by far more" is not
+supported by the synthetic evidence:** in additive-fluorophore + first-order-reabsorption physics the
+signal is largely linear, so the nonlinear-only information fraction is inherently modest. The lasting
+contribution is the **evaluation methodology**, which is the correct way to define and quantify
+selection quality on nonlinear data and is what makes any AE advantage visible and attributable.
+
+### 12.2 Remaining directions
+
+- **Strongly-nonlinear mixing** (FRET coupling, ground-state depletion/saturation, intimate
+  multiplicative mixtures) — a regime with a *large* nonlinear-only information fraction, where the AE
+  margin could become decisive. A renderer effort, evaluated with the panel metric above.
 - **Real-data validation (the decisive gate).** Validate the winning config on the actual **Lichens**
-  and **Collagen** cubes (data not present on this machine), where the true task and real nonlinear
-  photophysics may favour the nonlinear model in ways a fair synthetic proxy has not.
+  and **Collagen** cubes (data not present on this machine), where real photophysics may carry far more
+  nonlinear structure than a fair synthetic proxy.
 
 ---
 
