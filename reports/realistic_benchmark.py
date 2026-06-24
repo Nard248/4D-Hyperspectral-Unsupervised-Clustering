@@ -54,10 +54,15 @@ LIB = {**DISC, **NUIS}
 
 
 def build_dataset(seed, *, disc_amp=1.0, nuisance_amp=2.0, turbidity_amp=1.0,
-                  rayleigh=0.5, raman=0.4, photon_scale=600, read_sigma=0.005, size=64):
+                  rayleigh=0.5, raman=0.4, photon_scale=600, read_sigma=0.005, size=64,
+                  reabsorption=False, reabsorption_strength=2.5):
     """Render one confounded scene. All confound strengths are overridable for sweeps; the defaults
     reproduce the headline realistic regime (doc 06). ``nuisance_amp=0, turbidity_amp=0, rayleigh=0,
-    raman=0`` recovers a clean (variance≈informativeness) regime for the phase-diagram endpoints."""
+    raman=0`` recovers a clean (variance≈informativeness) regime for the phase-diagram endpoints.
+
+    ``reabsorption=True`` turns on the secondary inner-filter (self-absorption) in the renderer — a
+    concentration-dependent RESHAPING of each emission band that relocates discriminative information
+    into band shape/ratios (the honest nonlinear regime; see docs 15-16)."""
     acq = AcquisitionConfig(excitations=EXCITATIONS, em_min=420, em_max=700, em_step=5)
     disc_mats = [Material(n, {n: 1.0}) for n in DISC]
     nuis_mats = [Material(n, {n: 1.0}) for n in NUIS]
@@ -66,7 +71,8 @@ def build_dataset(seed, *, disc_amp=1.0, nuisance_amp=2.0, turbidity_amp=1.0,
         disc_amp=disc_amp, nuisance_amp=nuisance_amp, turbidity_amp=turbidity_amp)
     artifacts = ArtifactConfig(rayleigh_strength=rayleigh, raman_strength=raman, second_order=True,
                                photon_scale=photon_scale, read_sigma=read_sigma)
-    physics = PhysicsConfig(psf_sigma_px=1.0)
+    physics = PhysicsConfig(psf_sigma_px=1.0, reabsorption=reabsorption,
+                            reabsorption_strength=reabsorption_strength)
     spectra, gt = render(scene, LIB, acq, artifacts=artifacts, physics=physics,
                          seed=seed, scatter_field=scatter)
     return spectra, gt, labels.ravel(), acq

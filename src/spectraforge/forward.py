@@ -25,6 +25,15 @@ def render(scene, library, acquisition, artifacts=None, physics=None, seed=None,
     em = acquisition.emission_grid()
     rng = np.random.default_rng(seed)
 
+    # Per-pixel, per-emission-wavelength absorbance Σ_k ε_k c_k · absorption_k(λ_em), used for
+    # reabsorption (secondary inner-filter). Absorption cross-section ≈ the excitation profile.
+    em_absorbance = None
+    if physics is not None and getattr(physics, "reabsorption", False):
+        em_absorbance = np.zeros((h, w, len(em)), dtype=float)
+        for fname, cmap in conc.items():
+            f = library[fname]
+            em_absorbance += f.extinction * cmap[:, :, None] * f.excitation(em)[None, None, :]
+
     excitations = {}
     clean_cubes = {}
     per_fluorophore = {}                          # fname -> {ex -> (n_em,) per-pixel-max spectrum}
@@ -50,7 +59,7 @@ def render(scene, library, acquisition, artifacts=None, physics=None, seed=None,
         if physics is not None:
             from spectraforge.physics import apply_physics
 
-            cube = apply_physics(cube, physics, em, scale, absorbance)
+            cube = apply_physics(cube, physics, em, scale, absorbance, em_absorbance=em_absorbance)
         clean_cubes[float(ex)] = cube.copy()
         if artifacts is not None:
             from spectraforge.artifacts import add_noise, add_scatter_lines
