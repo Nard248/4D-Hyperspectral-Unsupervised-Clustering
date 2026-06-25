@@ -55,7 +55,7 @@ LIB = {**DISC, **NUIS}
 
 def build_dataset(seed, *, disc_amp=1.0, nuisance_amp=2.0, turbidity_amp=1.0,
                   rayleigh=0.5, raman=0.4, photon_scale=600, read_sigma=0.005, size=64,
-                  reabsorption=False, reabsorption_strength=2.5, disc_extinction=None):
+                  reabsorption=False, reabsorption_strength=2.5, disc_extinction=None, em_step=5):
     """Render one confounded scene. All confound strengths are overridable for sweeps; the defaults
     reproduce the headline realistic regime (doc 06). ``nuisance_amp=0, turbidity_amp=0, rayleigh=0,
     raman=0`` recovers a clean (variance≈informativeness) regime for the phase-diagram endpoints.
@@ -66,7 +66,7 @@ def build_dataset(seed, *, disc_amp=1.0, nuisance_amp=2.0, turbidity_amp=1.0,
     set) overrides the discriminative dyes' extinction so *their* concentration dominates the
     reabsorption reshaping — a cleaner nonlinear-DISCRIMINATIVE regime (less nuisance-driven shape)."""
     import dataclasses
-    acq = AcquisitionConfig(excitations=EXCITATIONS, em_min=420, em_max=700, em_step=5)
+    acq = AcquisitionConfig(excitations=EXCITATIONS, em_min=420, em_max=700, em_step=em_step)
     disc = ({n: dataclasses.replace(f, extinction=disc_extinction) for n, f in DISC.items()}
             if disc_extinction is not None else DISC)
     lib = {**disc, **NUIS}
