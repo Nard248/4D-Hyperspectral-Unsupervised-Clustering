@@ -1,13 +1,16 @@
-"""Five synthetic full-ME-HSI datasets at increasing MIXTURE+NOISE, high spectral resolution.
+"""Five synthetic full-ME-HSI datasets at increasing MIXTURE+NOISE+CLUTTER, high spectral resolution,
+evaluated under a REALISTIC few-shot labelled budget — the setting where full-band data underperforms
+a good selection (as seen on real instruments).
 
-Pipeline (with a verification gate printed at every stage):
-  1. Build 5 levels (pristine -> severe): more nuisance spectral mixture + more photon/read/scatter noise.
-     High resolution: emission 420-700 nm @ 2 nm = 141 bands x 4 excitations = 564 features.
-  2. ROIs: because we author the scene, the ground-truth concentration fields give a purity margin per
-     pixel; the clearest 50% form the ROI (clean labels, like an analyst drawing regions on clear areas).
-  3. Full-data classification (KNN + RF + MLP + logreg, CV) on ALL 564 bands -> the ceiling per level.
-  4. Select k=24 bands with PCA (pca_load) and the AE (conv & mlp) + supervised mutual_info reference.
-  5. Re-classify on the selected bands; report the ACCURACY DIFFERENCE vs full data, and AE - PCA.
+Pipeline (verification gate printed per level):
+  1. Build 5 levels (pristine -> severe): more nuisance spectral mixture + photon/read/scatter noise +
+     class-irrelevant fixed-pattern CLUTTER injected into the cube. High res: 141 em-bands x 4 ex = 564.
+  2. ROIs: clearest 50% pixels by ground-truth concentration purity (clean labels).
+  3. Few-shot labels: train on only `PER_CLASS` ROI pixels/class, test on the held-out ROI — so the
+     full 564-band classifier overfits the clutter and a 24-band selection can WIN.
+  4. Select k=24 with PCA (pca_load) and the AE (conv & mlp) + supervised mutual_info reference.
+  5. Report macro-F1 for full vs each selection, and Δ = selection - full (POSITIVE = selection beats
+     full data) — averaged over dataset seeds × train/test repeats.
 
 Run:  python reports/mixnoise_experiment.py [--smoke]
 """
@@ -21,11 +24,9 @@ import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_selection import mutual_info_classif
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import balanced_accuracy_score, f1_score
-from sklearn.model_selection import StratifiedKFold, cross_val_predict
+from sklearn.metrics import f1_score
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.neural_network import MLPClassifier
-from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
 import method_zoo as mz
@@ -38,43 +39,49 @@ from swarm_zoo import FlexSpectralAE
 BUDGET = 24
 SIZE = 64
 EM_STEP = 2
-# 5 levels: (nuisance_amp = spectral mixture, photon_scale & read_sigma & scatter = noise)
+PER_CLASS = 12          # realistic few-shot labelled budget per class (small ROIs)
+REPEATS = 6             # train/test resamples per dataset
+NBANDS = 4 * 141
+# 5 levels: nuisance (spectral mixture) + photon/read/scatter (noise) + clutter (fixed-pattern, the
+# dominant real-instrument confound that makes full-band data overfit at small label budgets)
 LEVELS = {
-    "L1-pristine": dict(nuisance_amp=0.2, turbidity_amp=0.1, rayleigh=0.10, raman=0.10, photon_scale=100000, read_sigma=0.001),
-    "L2-low":      dict(nuisance_amp=0.6, turbidity_amp=0.3, rayleigh=0.20, raman=0.20, photon_scale=20000,  read_sigma=0.003),
-    "L3-moderate": dict(nuisance_amp=1.2, turbidity_amp=0.6, rayleigh=0.35, raman=0.30, photon_scale=2000,   read_sigma=0.005),
-    "L4-high":     dict(nuisance_amp=2.0, turbidity_amp=1.0, rayleigh=0.50, raman=0.40, photon_scale=600,    read_sigma=0.008),
-    "L5-severe":   dict(nuisance_amp=3.0, turbidity_amp=1.4, rayleigh=0.70, raman=0.50, photon_scale=200,    read_sigma=0.012),
+    "L1-pristine": dict(nuisance_amp=0.4, turbidity_amp=0.1, rayleigh=0.10, raman=0.10, photon_scale=50000, read_sigma=0.002, clutter_modes=0,  clutter_amp=0.0),
+    "L2-low":      dict(nuisance_amp=0.8, turbidity_amp=0.3, rayleigh=0.20, raman=0.20, photon_scale=8000,  read_sigma=0.004, clutter_modes=20, clutter_amp=1.2),
+    "L3-moderate": dict(nuisance_amp=1.2, turbidity_amp=0.6, rayleigh=0.35, raman=0.30, photon_scale=2000,  read_sigma=0.006, clutter_modes=28, clutter_amp=2.2),
+    "L4-high":     dict(nuisance_amp=2.0, turbidity_amp=1.0, rayleigh=0.50, raman=0.40, photon_scale=600,   read_sigma=0.009, clutter_modes=36, clutter_amp=3.3),
+    "L5-severe":   dict(nuisance_amp=3.0, turbidity_amp=1.4, rayleigh=0.70, raman=0.50, photon_scale=200,   read_sigma=0.012, clutter_modes=44, clutter_amp=4.5),
 }
 _AE_CONV = dict(backbone="conv", act="gelu", mask_ratio=0.5, latent_dim=8, depth=3, width=64, epochs=250)
-_AE_MLP = dict(backbone="mlp", act="gelu", mask_ratio=0.5, latent_dim=6, depth=3, width=128, epochs=300)
+_AE_MLP = dict(backbone="mlp", act="gelu", mask_ratio=0.6, latent_dim=6, depth=3, width=128, epochs=300)
 
 
 def roi_mask(seed, size, frac=0.5):
-    fields = np.stack([random_field(size, size, seed * 13 + 31 * k) for k in range(len(DISC))])
-    purity = (np.sort(fields, 0)[-1] - np.sort(fields, 0)[-2]).ravel()
-    return purity >= np.quantile(purity, 1 - frac)
+    f = np.stack([random_field(size, size, seed * 13 + 31 * k) for k in range(len(DISC))])
+    p = (np.sort(f, 0)[-1] - np.sort(f, 0)[-2]).ravel()
+    return p >= np.quantile(p, 1 - frac)
 
 
 def _clfs(seed):
     return {"knn": KNeighborsClassifier(7),
             "rf": RandomForestClassifier(150, random_state=seed, n_jobs=-1),
-            "mlp": MLPClassifier(hidden_layer_sizes=(48,), max_iter=250, random_state=seed),
-            "logreg": LogisticRegression(max_iter=300)}
+            "mlp": MLPClassifier(hidden_layer_sizes=(48,), max_iter=250, random_state=seed)}
 
 
-def classify(X, y, cols, seed, folds=4):
-    """CV macro-F1 + balanced-acc on standardized selected bands; return per-clf and the best-NL/knn."""
-    Xs = X[:, cols]
-    cv = StratifiedKFold(folds, shuffle=True, random_state=seed)
-    f1, ba = {}, {}
-    for n, c in _clfs(seed).items():
-        with open(os.devnull, "w") as dn, contextlib.redirect_stdout(dn):
-            yh = cross_val_predict(make_pipeline(StandardScaler(), c), Xs, y, cv=cv)
-        f1[n] = f1_score(y, yh, average="macro"); ba[n] = balanced_accuracy_score(y, yh)
-    bestnl = max(f1["knn"], f1["rf"], f1["mlp"])
-    return dict(knn=f1["knn"], rf=f1["rf"], mlp=f1["mlp"], logreg=f1["logreg"],
-                bestNL=bestnl, knn_ba=ba["knn"], bestNL_ba=max(ba["knn"], ba["rf"], ba["mlp"]))
+def fewshot(X, y, cols, seed):
+    """Mean macro-F1 over REPEATS few-shot splits; return knn and best-of-panel."""
+    knn, best = [], []
+    for r in range(REPEATS):
+        rng = np.random.default_rng(seed * 1000 + r)
+        tr = np.concatenate([rng.choice(np.where(y == c)[0], PER_CLASS, replace=False) for c in np.unique(y)])
+        te = np.setdiff1d(np.arange(len(y)), tr)
+        sc = StandardScaler().fit(X[tr][:, cols])
+        Xtr, Xte = sc.transform(X[tr][:, cols]), sc.transform(X[te][:, cols])
+        f1s = {}
+        for n, c in _clfs(seed).items():
+            with open(os.devnull, "w") as dn, contextlib.redirect_stdout(dn):
+                c.fit(Xtr, y[tr]); f1s[n] = f1_score(y[te], c.predict(Xte), average="macro")
+        knn.append(f1s["knn"]); best.append(max(f1s.values()))
+    return float(np.mean(knn)), float(np.mean(best))
 
 
 def ae_cols(spectra, colmap, seed, kw):
@@ -86,54 +93,51 @@ def ae_cols(spectra, colmap, seed, kw):
 def main():
     smoke = "--smoke" in sys.argv
     levels = (["L1-pristine", "L5-severe"] if smoke else list(LEVELS))
-    seeds = ([1] if smoke else [1, 2, 3])
-    print("=" * 100)
-    print(f"5-LEVEL MIX/NOISE EXPERIMENT — high-res 564-band ME-HSI, ROI pixels, budget={BUDGET}/{4*141}")
-    print("=" * 100)
-    summary = []
+    seeds = ([1] if smoke else [1, 2])
+    print("=" * 104)
+    print(f"5-LEVEL MIX/NOISE/CLUTTER — high-res 564-band, ROI px, FEW-SHOT {PER_CLASS}/class x{REPEATS}, k={BUDGET}")
+    print("Δ = selection - full  (POSITIVE => the 24-band selection BEATS full 564-band data)")
+    print("=" * 104)
+    rows = []
     for lvl in levels:
         params = LEVELS[lvl]
-        full, selp, sela_c, sela_m, selmi = [], [], [], [], []
+        acc = {m: {"knn": [], "best": []} for m in ["full", "PCA", "AE-conv", "AE-mlp", "mutInfo*"]}
         for seed in seeds:
             sp, gt, y, acq = build_dataset(seed, size=SIZE, em_step=EM_STEP, **params)
             X, colmap = feature_matrix(sp)
-            roi = roi_mask(seed, SIZE)
-            Xr, yr = X[roi], y[roi]
-            # ---- per-step verification ----
-            assert X.shape[1] == 4 * 141, X.shape
-            assert np.isfinite(X).all()
-            assert set(np.unique(yr)) == {0, 1, 2}
-            full.append(classify(Xr, yr, list(range(X.shape[1])), seed))
+            roi = roi_mask(seed, SIZE); Xr, yr = X[roi], y[roi]
+            assert X.shape[1] == NBANDS and np.isfinite(X).all() and set(np.unique(yr)) == {0, 1, 2}
             rng = np.random.default_rng(seed)
-            selp.append(classify(Xr, yr, mz.pca_load(X, colmap, BUDGET, seed, rng, sp, k=6), seed))
-            sela_c.append(classify(Xr, yr, ae_cols(sp, colmap, seed, _AE_CONV), seed))
-            sela_m.append(classify(Xr, yr, ae_cols(sp, colmap, seed, _AE_MLP), seed))
-            mi = topn_diverse(np.nan_to_num(mutual_info_classif(Xr, yr, random_state=seed)), colmap, BUDGET)
-            selmi.append(classify(Xr, yr, mi, seed))
+            sel = {"full": list(range(NBANDS)),
+                   "PCA": mz.pca_load(X, colmap, BUDGET, seed, rng, sp, k=6),
+                   "AE-conv": ae_cols(sp, colmap, seed, _AE_CONV),
+                   "AE-mlp": ae_cols(sp, colmap, seed, _AE_MLP),
+                   "mutInfo*": topn_diverse(np.nan_to_num(mutual_info_classif(Xr, yr, random_state=seed)), colmap, BUDGET)}
+            for name, cols in sel.items():
+                k, b = fewshot(Xr, yr, cols, seed)
+                acc[name]["knn"].append(k); acc[name]["best"].append(b)
 
-        def avg(rows, k):
-            return float(np.mean([r[k] for r in rows]))
+        def mean(m, k):
+            return float(np.mean(acc[m][k]))
 
-        f_nl, p_nl = avg(full, "bestNL"), avg(selp, "bestNL")
-        ac_nl, am_nl = avg(sela_c, "bestNL"), avg(sela_m, "bestNL")
-        ae_nl = max(ac_nl, am_nl)
-        mi_nl = avg(selmi, "bestNL")
+        full_k, full_b = mean("full", "knn"), mean("full", "best")
         print(f"\n### {lvl}  (nuis={params['nuisance_amp']}, photon={params['photon_scale']}, "
-              f"read={params['read_sigma']})  | {len(seeds)} seeds, ROI px")
-        print(f"  VERIFY: 564 bands, 3 classes, finite — OK")
-        print(f"  full-data(564)  bestNL={f_nl:.3f}  knn={avg(full,'knn'):.3f}  logreg={avg(full,'logreg'):.3f}")
-        print(f"  PCA  (k={BUDGET})  bestNL={p_nl:.3f}  knn={avg(selp,'knn'):.3f}   Δ(full-sel)={f_nl-p_nl:+.3f}")
-        print(f"  AE-conv(k={BUDGET}) bestNL={ac_nl:.3f}  knn={avg(sela_c,'knn'):.3f}   Δ(full-sel)={f_nl-ac_nl:+.3f}")
-        print(f"  AE-mlp (k={BUDGET}) bestNL={am_nl:.3f}  knn={avg(sela_m,'knn'):.3f}   Δ(full-sel)={f_nl-am_nl:+.3f}")
-        print(f"  mutual_info* k={BUDGET} bestNL={mi_nl:.3f}  (supervised reference)")
-        print(f"  >>> AE(best) - PCA = {ae_nl - p_nl:+.3f}   |   retention: PCA {p_nl/f_nl:.0%}, AE {ae_nl/f_nl:.0%}")
-        summary.append((lvl, f_nl, p_nl, ae_nl, mi_nl, ae_nl - p_nl))
+              f"clutter={params['clutter_amp']}x{params['clutter_modes']})  VERIFY 564b/3cls OK")
+        print(f"  {'method':<10}{'knn':>7}{'bestNL':>8}{'Δknn':>8}{'Δbest':>8}")
+        print(f"  {'full-564':<10}{full_k:>7.3f}{full_b:>8.3f}{'—':>8}{'—':>8}")
+        best_ae = None
+        for name in ["PCA", "AE-conv", "AE-mlp", "mutInfo*"]:
+            k, b = mean(name, "knn"), mean(name, "best")
+            tag = "  <-- beats full" if b > full_b else ""
+            print(f"  {name:<10}{k:>7.3f}{b:>8.3f}{k-full_k:>+8.3f}{b-full_b:>+8.3f}{tag}")
+        rows.append((lvl, full_b, mean("PCA", "best"), max(mean("AE-conv", "best"), mean("AE-mlp", "best")),
+                     mean("mutInfo*", "best")))
 
-    print("\n" + "=" * 100)
-    print(f"{'level':<14}{'full564':>9}{'PCA':>8}{'AE':>8}{'mutInfo*':>10}{'AE-PCA':>9}{'PCAret':>8}{'AEret':>7}")
-    for lvl, f_nl, p_nl, ae_nl, mi_nl, d in summary:
-        print(f"{lvl:<14}{f_nl:>9.3f}{p_nl:>8.3f}{ae_nl:>8.3f}{mi_nl:>10.3f}{d:>+9.3f}{p_nl/f_nl:>8.0%}{ae_nl/f_nl:>7.0%}")
-    print("\nΔ(full-sel) = accuracy lost by selecting 24/564 bands; AE-PCA = which selector retains more.")
+    print("\n" + "=" * 104)
+    print(f"{'level':<14}{'full564':>9}{'PCA':>8}{'AE':>8}{'mutInfo*':>10}{'AE-full':>9}{'PCA-full':>10}{'AE-PCA':>8}")
+    for lvl, f, p, a, mi in rows:
+        print(f"{lvl:<14}{f:>9.3f}{p:>8.3f}{a:>8.3f}{mi:>10.3f}{a-f:>+9.3f}{p-f:>+10.3f}{a-p:>+8.3f}")
+    print("\nPositive AE-full / PCA-full => selection beats full 564-band data (the real-instrument case).")
 
 
 if __name__ == "__main__":

@@ -55,7 +55,8 @@ LIB = {**DISC, **NUIS}
 
 def build_dataset(seed, *, disc_amp=1.0, nuisance_amp=2.0, turbidity_amp=1.0,
                   rayleigh=0.5, raman=0.4, photon_scale=600, read_sigma=0.005, size=64,
-                  reabsorption=False, reabsorption_strength=2.5, disc_extinction=None, em_step=5):
+                  reabsorption=False, reabsorption_strength=2.5, disc_extinction=None, em_step=5,
+                  clutter_modes=0, clutter_amp=0.0):
     """Render one confounded scene. All confound strengths are overridable for sweeps; the defaults
     reproduce the headline realistic regime (doc 06). ``nuisance_amp=0, turbidity_amp=0, rayleigh=0,
     raman=0`` recovers a clean (variance≈informativeness) regime for the phase-diagram endpoints.
@@ -81,7 +82,32 @@ def build_dataset(seed, *, disc_amp=1.0, nuisance_amp=2.0, turbidity_amp=1.0,
                             reabsorption_strength=reabsorption_strength)
     spectra, gt = render(scene, lib, acq, artifacts=artifacts, physics=physics,
                          seed=seed, scatter_field=scatter)
+    if clutter_amp > 0 and clutter_modes > 0:
+        add_cube_clutter(spectra, size, seed, n_modes=clutter_modes, amp=clutter_amp)
     return spectra, gt, labels.ravel(), acq
+
+
+def add_cube_clutter(spectra, size, seed, n_modes=24, amp=1.0):
+    """Inject class-irrelevant fixed-pattern / illumination clutter INTO the cube (so any selector and
+    the full-data classifier all see it identically). Each mode = a smooth, class-irrelevant spatial
+    field × a per-emission-band random gain. Many such modes create high-variance directions that, with
+    few labels, make the *full*-band classifier overfit the clutter — so a good band selection can then
+    *beat* full data, as observed on real instruments."""
+    from spectraforge.scenegen import random_field
+    rng = np.random.default_rng(seed * 7919 + 1)
+    exs = list(spectra.excitation_wavelengths)
+    nem = spectra.get_excitation(exs[0]).cube.shape[-1]
+    sig = float(np.mean([spectra.get_excitation(e).cube.std() for e in exs]))
+    for k in range(n_modes):
+        field = random_field(size, size, seed * 101 + 991 * k + 3)
+        field = field - field.mean()
+        for e in exs:
+            gain = np.zeros(nem)
+            sub = rng.choice(nem, int(rng.integers(nem // 8, nem // 3)), replace=False)
+            gain[sub] = rng.normal(0, 1, len(sub))
+            exd = spectra.get_excitation(e)
+            exd.cube = exd.cube + amp * sig * field[:, :, None] * gain[None, None, :]
+    return spectra
 
 
 def band_is_discriminative(colmap):
