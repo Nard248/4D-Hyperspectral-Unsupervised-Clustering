@@ -28,8 +28,8 @@ from realistic_benchmark import build_dataset
 from sweep_common import topn_diverse
 from swarm_zoo import FlexSpectralAE
 
-REPEATS = 4
-BUDGETS = [10, 25, 50, 100]
+REPEATS = 5
+BUDGETS = [6, 10, 15, 25, 40]   # map the label-budget crossover: where does full-data overtake selection?
 _z = lambda s: (s - np.mean(s)) / (np.std(s) + 1e-9)
 
 

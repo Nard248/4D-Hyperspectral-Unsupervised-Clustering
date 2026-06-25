@@ -36,4 +36,22 @@ data, so good bands are found with *fewer* labels. Test: does AE-denoised releva
 relevance and full-data at a *smaller* label budget, under clutter? → `semisup_denoise.py`,
 label-budget sweep {10,25,50,100}/class on the cluttered L4/L5.
 
-_(H1b running — result appended on completion)_
+### H1b (AE-denoised relevance / label efficiency) — honest negative + reframing
+
+**Result (1-seed smoke, L5-severe):** labels/class=25 → full=0.566 beats all selections (oracle 0.595
+edges it); **fewF-den ≈ fewF-raw** (0.527 vs 0.524 — denoising the relevance estimate does NOT help).
+labels/class=100 → full=**0.857**, dominating everything (even oracle 0.790).
+
+**Verdict (reshapes the agenda):** full-data accuracy **scales strongly with label count**. The
+"selection beats full-data" phenomenon (doc 19) is **narrow** — it needs *very few* labels (≤12/class)
++ high clutter. At a reasonable budget full-data wins, and AE-denoised relevance buys no label
+efficiency. **So the AE's defensible value is COMPRESSION (match full-data accuracy from a few % of
+bands) + NOISE-ROBUSTNESS vs PCA — not beating full-data.** The "semi-supervised AE beats full" lead
+(H1) is a **dead end at realistic label budgets**; recorded as an honest negative.
+
+**Next:** map the **label-budget crossover** precisely (budgets 6→40, L4/L5, 2 seeds) — where does
+full-data overtake selection, and is the AE the best selector in the few-label regime? Then pivot the
+night to the *real* value props: **H2** (AE−PCA margin vs noise, monotonic) and **H4** (compression:
+accuracy vs #bands — how few bands can the AE use while matching full?).
+
+_(label-budget crossover sweep running)_
