@@ -1,6 +1,6 @@
 # SpectraForge — Autoencoder + Latent-Perturbation Band Selection for Multi-Excitation Hyperspectral Imaging
 
-### A complete research narrative: from a chance-level published model to a selector that matches and, on clean data, exceeds the best known blind methods
+### A complete research narrative: from a chance-level published model to a sound unsupervised selector that matches the best blind method across regimes and significantly exceeds it on nonlinear data
 
 **Project:** `spectral-select` / SpectraForge
 **Author:** Narek (with the SpectraForge training-machine agent)
@@ -36,9 +36,15 @@ problem)**. Over the course of this program we:
    blind method.
 
 **Bottom line:** once the bugs are fixed, the metric is honest, and the band-collapse is removed, the
-autoencoder + latent-perturbation idea goes from chance-level to **best-in-class on clean data and
-near the information-theoretic ceiling on realistic data.** The remaining gate is validation on the
-real Lichens / Collagen cubes.
+autoencoder + latent-perturbation idea goes from chance-level to a **sound, competitive,
+fully-unsupervised band selector.** A later comprehensive, significance-tested metric battery (§13 /
+doc 18 — 4 regimes × 6 seeds × 5 metric families) sharpens this: **the AE ties the best blind baseline
+(`pca_load`) on realistic and FRET data, *significantly exceeds it on the nonlinear reabsorption
+regime*, and captures nonlinear structure linear selection cannot — while `pca_load` remains the
+strongest blind method on clean/linear data and for raw ground-truth fidelity.** *(This revises the
+narrower "AE exceeds pca on clean" headline below, which holds only for the noisier sweep-common clean
+regime + the masked-MLP recipe; the AE's clean advantage is noise-dependent, not universal — see
+§13.)* The remaining gate is validation on the real Lichens / Collagen cubes.
 
 ---
 
@@ -462,7 +468,39 @@ wrapper selector), which is a different method, not the blind AE.
 
 ---
 
-## 13. References
+## 13. The comprehensive metric battery (doc 18)
+
+To make the verdict *diamond-solid* rather than reliant on one number, we ran a full evidence battery
+(`reports/metric_suite.py`): **5 metric families × 8 selectors × 4 regimes × 6 seeds**, with
+significance testing. The metric families: (A) downstream **information-retention** (classifier panel
+linear→nonlinear, CV: macro-F1, balanced-accuracy, MCC, Cohen's κ, plus the nonlinear-only `gap`);
+(B) **classifier-independent information** (relevance = Σ per-band MI, redundancy = mean |corr|, mRMR);
+(C) **ground-truth band fidelity** (precision/recall/Jaccard vs the top-MI bands in a near-noise-free
+render); (D) **stability** (mean pairwise Jaccard across seeds); (E) **significance** (bootstrap 95% CI,
+Wilcoxon, Cohen's d). Selectors span blind (`random`, `variance`, `pca_load`, `laplacian`, `AE-conv`,
+`AE-mlp`), supervised references (`mutual_info`, `mRMR`), and the `all-bands` ceiling.
+
+**Headline (AE best-of-family vs `pca_load`, best-NL macro-F1):**
+
+| regime | AE | `pca_load` | margin | 95% CI | Cohen d | verdict |
+|--------|---:|-----------:|-------:|--------|--------:|---------|
+| clean | 0.590 | **0.635** | −0.046 | [−0.079, −0.019] | −1.20 | **pca wins (significant)** |
+| realistic | 0.527 | 0.531 | −0.004 | [−0.018, +0.008] | −0.27 | tie |
+| reabsorb | **0.449** | 0.431 | +0.018 | [+0.001, +0.029] | +0.94 | **AE wins (CI excludes 0)** |
+| fret | 0.635 | 0.642 | −0.007 | [−0.031, +0.014] | −0.23 | tie |
+
+**What the battery proves (honest):** `pca_load` is the **strongest blind selector overall** — it wins
+clean significantly, ties realistic and FRET, and has the **best ground-truth band precision in every
+regime**. The **AE+perturbation is competitive, not dominant**: it ties on realistic and FRET,
+**significantly beats `pca_load` on the nonlinear reabsorption regime**, and captures nonlinear
+structure (its `gap` tracks pca's and the oracle's). Both AE and pca are **low-stability** (Jaccard
+≈ 0.1-0.2); supervised `mutual_info`/`mRMR` are modest upper bounds the blind methods approach. This
+multi-axis, significance-tested characterisation — not any single number — is the evidence. (Full table:
+`reports/exp_records/metric_suite.csv`; metric catalogue + synthesis in doc 18.)
+
+---
+
+## 14. References
 
 ### Scientific (fluorescence photophysics & chemometrics)
 
