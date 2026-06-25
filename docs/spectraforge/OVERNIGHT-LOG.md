@@ -54,4 +54,26 @@ full-data overtake selection, and is the AE the best selector in the few-label r
 night to the *real* value props: **H2** (AE−PCA margin vs noise, monotonic) and **H4** (compression:
 accuracy vs #bands — how few bands can the AE use while matching full?).
 
-_(label-budget crossover sweep running)_
+### Label-budget crossover map (L5-severe, 2 seeds × 5 repeats) — closes the "beat full" question
+
+| labels/class | full | PCA | AE | fewF-raw | fewF-den | oracle* |
+|-------------:|-----:|----:|---:|---------:|---------:|--------:|
+| 6  | 0.407 | 0.404 | 0.408 | 0.400 | 0.391 | **0.454** |
+| 10 | 0.443 | 0.441 | 0.427 | 0.426 | 0.437 | **0.488** |
+| 15 | 0.485 | 0.471 | 0.470 | 0.470 | 0.470 | **0.521** |
+| 25 | 0.571 | 0.528 | 0.529 | 0.534 | 0.536 | **0.579** |
+| 40 | 0.677 | 0.610 | 0.608 | 0.612 | 0.615 | 0.658 |
+
+**Definitive verdict:** **blind selection NEVER beats full-data** — it only *ties* at the very-few-label
+edge (≤6/class), and full-data pulls *further ahead as labels grow*. Only the **all-label oracle** beats
+full, and only below ~40 labels/class. `fewF-den ≈ fewF-raw` everywhere (denoised relevance is a dead
+end). So the AE/selection value proposition is **NOT accuracy improvement over full data.**
+
+**Reframe for the rest of the night → the real, defensible value props:**
+1. **Compression** (H4, now central): how few bands can a selector use while *retaining* full-data
+   accuracy? Selection lets you acquire 24/564 bands at ~equal accuracy — quantify the accuracy-vs-#bands
+   curve and which selector compresses best.
+2. **Noise-robustness vs PCA** (H2, running): is the AE the best *blind* selector as clutter grows?
+3. **Nonlinear-regime edge** (doc 17/18): the AE's significant win on reabsorption.
+
+_(H2 AE-PCA-vs-clutter running; H4 compression curve next)_
