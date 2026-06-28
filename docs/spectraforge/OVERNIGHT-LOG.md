@@ -98,7 +98,23 @@ they rank by variance, and clutter is high-variance-but-irrelevant.
 
 Newest entries at the top of this Round-3 block.
 
-### M1 — contrastive clutter-invariant selection (flagship, running)
+### M1 — contrastive clutter-invariant selection: FAILED, with a deep mechanism
+
+Result (L4-clutter): contrastive 0.552 < random 0.593 (no better than pca_load). **Why:** instance-
+discrimination *rewards* using the data's intrinsic clutter (clutter distinguishes pixels), and the
+augmentation only removes invariance to *added* clutter — so the encoder still uses clutter; occlusion
+highlights clutter bands.
+
+**Deep barrier (the honest core):** under clutter, signal and clutter are *both* low-rank spatial-spectral
+factors, and "which factor is class-relevant" is **defined by the labels** — so no purely unsupervised
+criterion separates them **unless it exploits a property the clutter lacks.** There is one: the signal
+has **physical structure** (smooth fluorophore emission; trilinear EEM) the random clutter does not. →
+two mechanism-grounded mitigations:
+- **M-phys:** enforce physical structure (spectral smoothness / trilinearity) to remove non-physical
+  clutter, *then* select. Attacks F1 with a property clutter lacks.
+- **M-repr:** the AE's genuine theoretical edge — **nonlinear representation beats linear PCA on a
+  nonlinear manifold.** Test AE-embedding vs PCA-projection classification on strongly nonlinear data
+  (where H16b's linear-denoising win should *not* hold).
 
 ---
 
