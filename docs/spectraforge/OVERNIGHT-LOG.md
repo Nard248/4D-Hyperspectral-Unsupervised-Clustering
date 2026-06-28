@@ -76,4 +76,32 @@ end). So the AE/selection value proposition is **NOT accuracy improvement over f
 2. **Noise-robustness vs PCA** (H2, running): is the AE the best *blind* selector as clutter grows?
 3. **Nonlinear-regime edge** (doc 17/18): the AE's significant win on reabsorption.
 
-_(H2 AE-PCA-vs-clutter running; H4 compression curve next)_
+### H2 — AE−PCA margin vs clutter (base fixed, few-shot 25/class, bootstrap CI)
+
+| clutter | AE | PCA | margin | 95% CI |
+|--------:|---:|----:|-------:|--------|
+| 0.0 | 0.412 | 0.449 | −0.037 | [−0.049, −0.025] (PCA wins) |
+| 0.5 | 0.420 | 0.424 | −0.005 | [−0.016, +0.008] |
+| 1.0 | 0.476 | 0.467 | +0.009 | [−0.005, +0.025] |
+| 2.0 | 0.508 | 0.503 | +0.005 | [−0.008, +0.018] |
+| 3.0 | 0.522 | 0.520 | +0.002 | [−0.013, +0.016] |
+| 4.5 | 0.527 | 0.533 | −0.006 | [−0.027, +0.013] |
+
+**Verdict:** the AE−PCA margin **improves monotonically** as clutter rises (−0.037 → ~0), confirming the
+*direction* (clutter relatively helps the AE) — **but the AE never *significantly* beats PCA** (CI
+excludes 0 only at clean, *against* the AE). So under clutter it is a **tie**, not a win. The doc-19
+"+0.020" was within noise. The AE's distinctive significant win remains the **nonlinear reabsorption
+regime** (doc 18).
+
+### Mid-session synthesis (honest)
+
+The night has rigorously **closed over-optimistic claims**: (a) selection does **not** beat full-data
+(any budget); (b) semi-supervised few-label AE is a **dead end**; (c) AE **ties** PCA under noise
+(better only directionally), wins significantly only on **nonlinear** data. The AE's real value prop is
+**compression + the nonlinear edge**, not accuracy dominance. Pivoting the rest of the night to nail
+the compression story (H4) and the mechanism (H5 redundancy), plus consensus stability (H6).
+
+_(H4 compression curve running)_
+
+> Note: the chain stalled after H2 (launched as a detached process → no completion wake-up). Fixed:
+> all experiments now run as tracked background tasks.
