@@ -41,8 +41,9 @@ def textured(gen, scale):
 
 def build_spatial(seed):
     gen = np.random.default_rng(seed)
-    # class regions = argmax of 3 smooth fields
-    fields = np.stack([gaussian_filter(gen.standard_normal((SIZE, SIZE)), 6) for _ in range(3)])
+    # class regions = argmax of 3 smooth fields (finer regions -> nuisance bands don't spuriously
+    # correlate with class, so the spatial SELECTOR can cleanly find the disc texture bands)
+    fields = np.stack([gaussian_filter(gen.standard_normal((SIZE, SIZE)), 3) for _ in range(3)])
     labels = fields.argmax(0).ravel()
     X = np.zeros((SIZE * SIZE, N_BANDS))
     disc_bands = list(range(2, 2 + N_DISC))       # the texture-discriminative bands
