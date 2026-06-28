@@ -65,6 +65,15 @@ regime + the masked-MLP recipe; the AE's clean advantage is noise-dependent, not
 >    not an accuracy tool, and is **unstable** under clutter (use regions/consensus). Always benchmark
 >    against **random** and **full-data**. The unsupervised AE+perturbation idea, while sound and fully
 >    debugged, is **dominated by simpler (PCA / supervised) methods in every role and regime tested.**
+> 6. **Round 3 (mechanism-driven mitigation campaign, ~30 more experiments).** Attacked every failure at
+>    its cause (contrastive clutter-invariance, supervised AE, AE-denoising, sparse-signal, spatial). All
+>    per-pixel mitigations hit the same wall: *selection ≠ classification*, and a discriminative band is
+>    either bright (simple methods find it) or dim (unextractable) — so the AE's *selection* mechanism is
+>    never both necessary and sufficient. **The one genuine, structurally-necessary win:** when class is
+>    carried by **spatial texture** (identical per-pixel marginals), **per-pixel band selection is provably
+>    blind** (the worst, below random, honest spatial-block CV) and only a **spatial/convolutional**
+>    approach works — **vindicating the original spatial-CAE idea for *spatial* discrimination, not
+>    per-pixel spectral band selection.** Detail in `OVERNIGHT-LOG.md` (Round-3 conclusion).
 >
 > The narrative below documents how the method was debugged and made competitive; the overnight addendum
 > is the **current, significance-tested bottom line** and supersedes the more optimistic claims in §§10–13

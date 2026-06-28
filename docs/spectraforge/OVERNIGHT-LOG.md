@@ -81,6 +81,35 @@ collapses blind selection to random.
 
 ---
 
+## Round 3 — CONCLUSION (the constructive answer)
+
+After attacking every documented failure with mechanism-grounded mitigations (contrastive, supervised
+AE, AE-denoising, sparse-signal, spatial), the campaign yields a clear, honest, *constructive* answer:
+
+**1. Per-pixel band selection has a fundamental barrier — the AE has no distinct advantage there.**
+Every mitigation hit the same wall: *selection ≠ classification*; unsupervised objectives capture
+*dominant variance*, not class-relevant structure; and a discriminative band is either bright (→ simple
+variance/PCA find it; AE unnecessary) or dim (→ unextractable; all fail). Even the *supervised* AE only
+ties marginal `mutInfo`/`RF-importance` with tiny within-noise margins. Confirmed across ~30 experiments.
+
+**2. The convolutional/spatial approach IS structurally necessary — in its proper domain.** When class
+is carried by **spatial texture** (identical per-pixel marginals), **per-pixel band selection is provably
+blind** (variance 0.516, mutInfo 0.517 — the worst, below random, 3 seeds, honest spatial-block CV),
+while the spatial approach + right bands succeed (oracle 0.751; spatial selectors 0.66–0.69, beating
+per-pixel by +0.14–0.17). **This vindicates the original spatial-CAE intuition — but for SPATIAL
+discrimination, not per-pixel spectral band selection.**
+
+**The framework that "works without doubt":** use the **convolutional/spatial** model when discrimination
+has **spatial structure** (where per-pixel methods provably fail); for purely per-pixel spectral
+discrimination, use **supervised** selection (and benchmark vs random + full). The honest scope of the
+AE/CAE's value is now precisely mapped.
+
+**Remaining engineering step (clear next):** the spatial *selector* (not just the oracle) needs to
+reliably find the texture bands — a proper **supervised spatial CAE** with leakage-free (block-CV)
+selection, and finer class regions to kill spurious spatial-MI. That completes the spatial-selector win.
+
+---
+
 ## Round 3 — failure analysis + mitigation campaign (synthetic-only; full model+data freedom)
 
 Goal: for each documented failure, instrument the **why**, design a **mitigation** that attacks that
