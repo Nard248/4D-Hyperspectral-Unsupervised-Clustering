@@ -147,8 +147,21 @@ structure marginal `mutInfo` misses). → **M-sup** (running).
 (nonlinear/XOR): the supAE's classifier head should learn the interaction and its perturbation should
 highlight *both* interacting dyes' bands — which marginal `mutInfo` cannot see (it failed on FRET; only
 `RFimp` won). If supAE ≥ RFimp on FRET *and* ties mutInfo on clutter, it's a **unified supervised
-selector that wins where each baseline fails** — the genuine "it works" result. Full run (3 seeds,
-clutter+FRET, 400 ep) in progress.
+selector that wins where each baseline fails** — the genuine "it works" result.
+
+**Full run (3 seeds):** clutter — supAE* 0.556 ≈ mutInfo 0.556 ≈ random 0.559 (no one beats random here;
+full 0.595 wins). FRET — **supAE* 0.526 is the best selector** (> RFimp 0.520 > mutInfo 0.519 > random
+0.515): the classifier head *does* capture the XOR the marginal MI misses. **But margins are tiny
+(+0.007, within noise) and nothing beats full-data.**
+
+**Why selection barely matters here (the key realization):** the discriminative signal is **spread across
+a broad emission window (many redundant bands)**, so selecting 24 ≈ using all 564. **Band selection only
+matters when the signal is SPARSE/concentrated.** → build a **sparse-nonlinear regime** (narrow
+fluorophore peaks at a few (ex,em) points + FRET + heavy clutter/noise) where full overfits the noise,
+random misses the signal, and a method that *finds the few nonlinear signal bands wins decisively*. This
+is where the supervised AE should win *big*, honestly (sparse concentrated signal is physically real).
+
+### M-sparse — does selection (and supAE) win BIG when the signal is sparse? (building)
 
 ---
 
