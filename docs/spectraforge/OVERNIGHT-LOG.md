@@ -3,9 +3,64 @@
 Newest entries at the top. Each: hypothesis → experiment → result → verdict → new questions. Plan in
 `OVERNIGHT-PLAN.md`.
 
-## Morning summary (updated as work proceeds)
+## Morning summary — read this first
 
-- _(will be filled in with the headline findings of the night)_
+The night was spent **rigorously stress-testing the value of blind band selection** (the AE+perturbation
+idea and PCA) under realistic conditions, with significance testing throughout. The findings are honest
+and consequential — several over-optimistic earlier claims did **not** survive, and one big new result
+emerged.
+
+**Headline findings**
+
+1. **Blind selection never beats full-data.** Across label budgets (6→100/class) on noisy data, full-564
+   accuracy ≥ every blind selection; it only *ties* at ≤6 labels/class and pulls ahead with more labels.
+   Only the *all-label* oracle beats full, and only below ~40 labels/class. (label-budget crossover)
+2. **Semi-supervised few-label AE is a dead end.** Few-label re-rank/fusion ≈ the few-label F-test, and
+   estimating relevance on the AE-denoised reconstruction gives **no** label-efficiency gain. (H1, H1b)
+3. **THE BIG ONE — on realistic high-res cluttered data, blind selection (AE *and* PCA) does NOT beat
+   RANDOM band selection.** In every cluttered regime (L2–L5) neither AE nor PCA exceeds the 95th
+   percentile of random 24-band subsets; **only the supervised `mutInfo` selector beats random.** Blind
+   selection beats random *only* in the pristine, clutter-free L1 case (where PCA is best). (beat-random)
+   - Likely mechanism (being confirmed): **high spectral resolution → massive redundancy**; with 564
+     bands the signal is smeared across so many that a random subset captures it, and clutter masks any
+     unsupervised criterion.
+4. **AE ≈ PCA everywhere.** PCA is better on clean (significantly), they tie under clutter (the AE−PCA
+   margin improves with clutter but never reaches a significant win), and the AE's *only* distinctive
+   significant advantage remains the **nonlinear reabsorption regime** (doc 18). (H2, H4, beat-random)
+5. **Compression:** blind selectors reach 95% of full accuracy at k≈64/564; supervised `mutInfo` at
+   k≈24 — ~2.7× better compression from using labels. (H4)
+
+**Bottom line (honest).** For *realistic, noisy, high-resolution* ME-HSI, **blind/unsupervised band
+selection — whether the AE or PCA — adds little over random; LABEL-AWARE (supervised) selection is
+necessary and clearly effective.** The AE+perturbation is competitive-with-PCA but not distinctly
+better except on nonlinear structure. This is the strongest, most decision-relevant result of the whole
+program.
+
+**Recommendation / next moves.** (a) Pivot to **supervised/semi-supervised selection using the ROI
+labels** you already have — it's the only thing that beats random *and* full at low budgets, and
+compresses best. (b) A proper **supervised AE** (latent + classifier head, not few-label re-ranking) is
+worth one clean test. (c) **Real-data validation** remains the decisive gate, now evaluated with this
+honest battery (must include the *random* baseline). (d) Confirm the **resolution-redundancy** mechanism
+(running) — if true, it's a clean, publishable insight about *when* band selection helps at all.
+
+---
+
+## Detailed log (newest first)
+
+### beat-random — does blind selection beat random? (k=24, few-shot 30/class, 12 random draws)
+
+| level | random µ / 95th | PCA | AE | mutInfo* | beats random |
+|-------|-----------------|----:|---:|---------:|--------------|
+| L1-pristine | 0.506 / 0.573 | **0.699** | **0.655** | 0.696 | AE & PCA **YES** |
+| L2-low | 0.448 / 0.479 | 0.470 | 0.449 | **0.504** | only mutInfo |
+| L3-moderate | 0.544 / 0.574 | 0.539 | 0.548 | **0.576** | only mutInfo |
+| L4-high | 0.563 / 0.587 | 0.549 | 0.575 | **0.604** | only mutInfo |
+| L5-severe | 0.569 / 0.592 | 0.549 | 0.569 | **0.615** | only mutInfo |
+
+**Verdict:** blind AE/PCA beat random **only** in pristine L1; under any clutter they collapse to random,
+while supervised `mutInfo` beats random throughout. The single most important honesty result of the
+night. (Machinery validated: L1 shows PCA clearly above random, so the test detects a good selection.)
+→ resolution-effect test launched to confirm the high-resolution-redundancy mechanism.
 
 ---
 
