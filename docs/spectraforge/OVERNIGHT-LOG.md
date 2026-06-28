@@ -74,6 +74,49 @@ Round 1 closed the negatives (blind ≈ random under clutter; use supervised mut
 
 _(Round-2 entries appended below as they complete.)_
 
+### ROUND-2 CONCLUSION — the decision map + the honest verdict
+
+Combining H15 (clutter-robust), H10 (supervised-nonlinear), H12 (phase map):
+
+**The decision map (H12, when is each approach worth it):**
+- **Blind selection (PCA/AE) beats random ONLY when clutter ≈ 0** (+0.04…+0.09); under *any* realistic
+  clutter it collapses to ≈ random. So **blind selection is only useful on clean instruments.**
+- **Supervised selection beats full-data only in one corner: clutter present + very few labels
+  (~10/class)** (+0.02…+0.03). With ≥25 labels, full-data wins — so selection is then for
+  **compression/cost**, not accuracy.
+- **Full data is the best accuracy choice across most of the map** (any moderate label budget).
+
+**The selector verdict (H10):** the best selector is **regime-matched supervision** — **marginal
+mutInfo** for clutter/linear confounds, **RF-importance** for nonlinear (interaction) structure (marginal
+MI fails on FRET/XOR). **The AE+perturbation is not distinctly best in any regime**, and its lone doc-18
+nonlinear edge **did not reproduce** at 3 seeds (AE *below* PCA on reabsorption). H15: clutter-suppression
+helps blind selection but cannot rescue it (labels still needed).
+
+**Bottom line of the whole program (rounds 1+2):** on realistic ME-HSI, **band selection is a
+compression tool, not an accuracy tool**; when it matters, **use regime-matched *supervised* selection**;
+the unsupervised AE+perturbation idea, while sound, is **dominated by simpler methods everywhere** and is
+**indistinguishable from random under clutter**. Always benchmark against **random** and **full-data**.
+
+### H12 — phase map (full, 2 seeds; few-shot best-NL F1)
+
+A) `mutInfo − full` (supervised selection minus full-data):
+```
+clutter\labels   10      25      50     100
+   0.0        -0.032  -0.039  -0.083  -0.112
+   1.5        +0.023  -0.016  -0.065  -0.093
+   3.0        +0.031  -0.001  -0.036  -0.074
+   4.5        +0.020  -0.002  -0.049  -0.072
+```
+B) `PCA − random` (blind selection minus random):
+```
+   0.0        +0.039  +0.070  +0.080  +0.088
+   1.5        -0.003  -0.006  +0.001  +0.002
+   3.0        +0.002  -0.017  -0.021  -0.013
+   4.5        -0.011  -0.012  -0.036  -0.016
+```
+**Verdict:** supervised selection beats full only at **clutter>0 + ~10 labels/class**; blind beats random
+only at **clutter=0**. A clean, actionable decision map.
+
 ### H10 — supervised/nonlinear selectors on nonlinear data (reabsorption, CV-panel best-NL; smoke)
 
 | method | best-NL |

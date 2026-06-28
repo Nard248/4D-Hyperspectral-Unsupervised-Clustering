@@ -46,6 +46,24 @@ narrower "AE exceeds pca on clean" headline below, which holds only for the nois
 regime + the masked-MLP recipe; the AE's clean advantage is noise-dependent, not universal — see
 §13.)* The remaining gate is validation on the real Lichens / Collagen cubes.
 
+> **⚠️ Overnight addendum (autonomous research rounds 1–2, see `OVERNIGHT-LOG.md`) — an honest, decisive
+> revision.** A two-round autonomous study with significance testing and a **random baseline** (the
+> control this program had been missing) sharply revised the verdict:
+> 1. **Blind selection (AE *and* PCA) does not beat *random* band selection under realistic clutter** —
+>    it only beats random on clean/clutter-free data. The cause is the clutter (class-irrelevant
+>    high-variance structure), not resolution (tested and confirmed).
+> 2. **Blind selection never beats full-data;** supervised selection beats full only in a narrow corner
+>    (clutter + ~10 labels/class). Band selection is a **compression** tool, not an accuracy tool.
+> 3. **The AE+perturbation is not distinctly best in any regime**, and its lone "nonlinear reabsorption
+>    edge over PCA" (doc 18 / §13) **did not reproduce at 3 seeds** (AE *below* PCA). 
+> 4. **Recommendation:** use **regime-matched *supervised* selection** — marginal mutual-information for
+>    clutter/linear confounds, **RF-importance for nonlinear** structure — and always benchmark against
+>    **random** and **full-data**. The unsupervised AE idea, while sound, is dominated by simpler methods.
+>
+> The narrative below documents how the method was debugged and made competitive; the overnight addendum
+> is the **current, significance-tested bottom line** and supersedes the more optimistic claims in §§10–13
+> where they conflict.
+
 ---
 
 ## 1. The problem and the idea
