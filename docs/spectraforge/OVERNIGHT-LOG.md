@@ -101,7 +101,25 @@ The night has rigorously **closed over-optimistic claims**: (a) selection does *
 **compression + the nonlinear edge**, not accuracy dominance. Pivoting the rest of the night to nail
 the compression story (H4) and the mechanism (H5 redundancy), plus consensus stability (H6).
 
-_(H4 compression curve running)_
+### H4 — Compression curve (L3-moderate, 50 labels/class; full-564 = 0.683)
+
+| k | PCA | AE | mutInfo* | random | AE %full |
+|--:|----:|---:|---------:|-------:|---------:|
+| 12 | 0.552 | 0.552 | 0.604 | 0.547 | 81% |
+| 24 | 0.606 | 0.616 | **0.659** | 0.638 | 90% |
+| 32 | 0.616 | 0.632 | 0.658 | 0.618 | 93% |
+| 64 | 0.656 | 0.657 | 0.680 | 0.662 | 96% |
+
+**Findings:** (a) **AE ≈ PCA** at every k (AE marginally ahead mid-range); both hit 95% of full at
+**k=64**. (b) **Supervised `mutInfo` compresses ~2.7× better — 95% of full at k=24.** (c) **Red flag:
+random is competitive** (k=24: random 0.638 ≈ AE 0.616 ≈ PCA 0.606) — in this high-res, redundant,
+cluttered, few-label regime a random 24-band subset captures most of the signal, so **blind selection
+barely beats random; only supervised selection clearly helps.**
+
+→ Launched a rigorous **beat-random** check across all 5 levels (does AE/PCA exceed the 95th percentile
+of random subsets, and does the AE beat random where PCA doesn't?).
+
+_(beat-random running)_
 
 > Note: the chain stalled after H2 (launched as a detached process → no completion wake-up). Fixed:
 > all experiments now run as tracked background tasks.
