@@ -81,6 +81,27 @@ collapses blind selection to random.
 
 ---
 
+## Round 3 — failure analysis + mitigation campaign (synthetic-only; full model+data freedom)
+
+Goal: for each documented failure, instrument the **why**, design a **mitigation** that attacks that
+cause, and test it (keeping **random** + **full-data** as honesty controls). Root cause across all
+failures: **unsupervised objectives (reconstruction/variance) are misaligned with discriminability** —
+they rank by variance, and clutter is high-variance-but-irrelevant.
+
+| failure | why (mechanism) | mitigation (this round) |
+|---------|-----------------|-------------------------|
+| **F1** blind ≈ random under clutter | variance/recon rank clutter; objective ≠ discriminability | **M1 contrastive clutter-INVARIANT encoder** (augment with known nuisance model → invariance), select by influence on the invariant rep. Flagship. Also M1b improved disentangling. |
+| **F2** AE ≈ PCA | synthetic discriminative structure is ~linear → nothing nonlinear to exploit | **M2** physically-grounded *dominant*-nonlinear regime (strong inner-filter/FRET/saturation manifolds) + a manifold-capturing AE |
+| **F3** selection unstable | many equiv. bands + clutter variation | **M3** consensus/ensemble + region selection |
+| **F4** AE-denoise = PCA-denoise | AE nonlinearity unused on ~linear data | folded into M2 (nonlinear regime) |
+| **F5** selection ≯ full-data | full has all info | reframe as compression; quantify cost/accuracy frontier |
+
+Newest entries at the top of this Round-3 block.
+
+### M1 — contrastive clutter-invariant selection (flagship, running)
+
+---
+
 ## Round 2 — continuing (constructive follow-ups to round 1)
 
 Round 1 closed the negatives (blind ≈ random under clutter; use supervised mutInfo). Round 2 chases the
