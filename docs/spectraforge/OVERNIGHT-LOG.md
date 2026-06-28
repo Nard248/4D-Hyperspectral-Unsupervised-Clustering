@@ -92,10 +92,31 @@ MI fails on FRET/XOR). **The AE+perturbation is not distinctly best in any regim
 nonlinear edge **did not reproduce** at 3 seeds (AE *below* PCA on reabsorption). H15: clutter-suppression
 helps blind selection but cannot rescue it (labels still needed).
 
+**Stability (H13):** under clutter, **every selector is highly unstable** — mean pairwise Jaccard of the
+24-band sets across scenes is ~0 (PCA 0.021, AE 0.000, mutInfo* 0.014, RFimp* 0.036). The sets are nearly
+disjoint because the clutter differs per scene and selectors track it. *Even supervised selection doesn't
+pick a consistent band set.* Practical implication: select **spectral regions / consensus across scenes**,
+not exact bands, for a fixed-band instrument.
+
 **Bottom line of the whole program (rounds 1+2):** on realistic ME-HSI, **band selection is a
 compression tool, not an accuracy tool**; when it matters, **use regime-matched *supervised* selection**;
 the unsupervised AE+perturbation idea, while sound, is **dominated by simpler methods everywhere** and is
-**indistinguishable from random under clutter**. Always benchmark against **random** and **full-data**.
+**indistinguishable from random under clutter**. Selection is also **unstable** under clutter (use regions
+/ consensus). The unifying cause: **clutter is high-variance, so every variance/reconstruction-driven
+(unsupervised) method is defeated by it; only label-aware methods escape.** Always benchmark against
+**random** and **full-data**.
+
+### H13 — selection stability (L4-high, 3 seeds, mean pairwise Jaccard)
+
+| selector | Jaccard |
+|----------|--------:|
+| PCA | 0.021 |
+| AE | 0.000 |
+| mutInfo* | 0.014 |
+| RFimp* | 0.036 |
+
+All near-zero → selected band-sets are nearly disjoint across scenes; no selector (blind or supervised)
+is stable under clutter. → testing H16 (AE as a *denoiser*, a new role) next.
 
 ### H12 — phase map (full, 2 seeds; few-shot best-NL F1)
 
