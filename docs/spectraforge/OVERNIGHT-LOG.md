@@ -5,6 +5,32 @@ Newest entries at the top. Each: hypothesis → experiment → result → verdic
 
 ## Morning summary — read this first
 
+### ★ FINAL VERDICT (after two autonomous rounds) ★
+
+**The AE+perturbation — and the AE in general — provides no distinctive value over PCA in any role
+tested (selection *or* denoising), on this synthetic ME-HSI.** Concretely, with significance testing and
+a random baseline:
+
+1. **Selection:** blind AE ≈ PCA ≈ **random** under realistic clutter (only beats random clutter-free);
+   never beats full-data; the lone doc-18 nonlinear edge didn't reproduce at 3 seeds.
+2. **Denoising:** classifying on the AE reconstruction helps **+0.13 on clean data**, but that is
+   **linear** low-rank denoising — **PCA-reconstruction(8) does it as well or better** (the AE's
+   nonlinearity adds nothing); and it helps *only* on clean data.
+3. **What to actually use:** **clean data →** low-rank PCA denoising + (any) blind selection or just full
+   data; **cluttered/realistic data →** regime-matched **supervised** selection (marginal MI for clutter,
+   RF-importance for nonlinear) — the only thing that beats random; selection is a **compression** tool,
+   not an accuracy tool, and is **unstable** under clutter (use regions/consensus).
+4. **Unifying cause:** clutter is high-variance, so every unsupervised (variance/reconstruction-driven)
+   method — variance, PCA-loadings, AE-recon, AE-perturbation — is defeated by it. Only labels escape.
+5. **The one thing that could change this verdict: real Lichens/Collagen data** (the decisive, still-open
+   gate), where informative structure may not be variance-prominent. Evaluate it with this battery —
+   always including the **random** and **full-data** baselines.
+
+*(Round-1 summary below is preserved; this box is the current, complete bottom line.)*
+
+---
+
+
 The night was spent **rigorously stress-testing the value of blind band selection** (the AE+perturbation
 idea and PCA) under realistic conditions, with significance testing throughout. The findings are honest
 and consequential — several over-optimistic earlier claims did **not** survive, and one big new result
@@ -81,13 +107,24 @@ _(Round-2 entries appended below as they complete.)_
 | clean | 0.755 | **0.879** | 0.699 | **0.901** | **+0.124** |
 | clutter | 0.594 | 0.544 | 0.549 | 0.516 | −0.050 |
 
-**The AE's first substantial, defensible win.** Used as a **denoiser** (classify on the AE
-reconstruction, not select bands), it **lifts accuracy +0.124 on clean data** (and AErec+PCA = 0.901, the
-best result in the whole program) — the bottleneck filters per-band noise off the signal manifold. Under
-clutter it *hurts* (−0.050: the high-variance clutter passes through the latent). So the AE's value is
-**nonlinear denoising preprocessing in the clutter-free regime**, NOT band selection. → H16b tests the
-crucial control: does the AE's *nonlinearity* beat *linear* (PCA-reconstruction) denoising? If yes, it's
-a real AE contribution. (Caveat to confirm.)
+Used as a **denoiser** (classify on the reconstruction, not select bands), the AE lifts accuracy +0.124
+on clean data. **But the control (H16b) defeats the AE claim:** it's **linear low-rank denoising**, done
+as well or better by PCA-reconstruction.
+
+**H16b — nonlinear (AE) vs linear (PCA-recon) denoising, full-data best-NL:**
+
+| regime | raw | **pcaR8 (linear)** | AErec (nonlinear) | AErec − pcaR8 |
+|--------|----:|-------------------:|------------------:|--------------:|
+| clean | 0.755 | **0.888** | 0.879 | −0.009 |
+| low | 0.569 | 0.525 | 0.547 | +0.021 |
+| moderate | 0.583 | 0.531 | 0.559 | +0.028 |
+| clutter | 0.594 | 0.521 | 0.544 | +0.023 |
+
+**Verdict:** the clean-data denoising win is real but **linear** — PCA-reconstruction(8) (0.888) ≥
+AE-reconstruction (0.879); the AE's nonlinearity adds *nothing* (−0.009 on clean). Denoising helps **only
+on clean** data (under noise/clutter it hurts vs raw, both methods). **Useful positive: low-rank
+(PCA-8) reconstruction denoising adds +0.13 accuracy on clean data** — a simple, linear preprocessing
+step. **The AE provides no distinctive value over PCA in *any* role — selection or denoising.**
 
 ### ROUND-2 CONCLUSION — the decision map + the honest verdict
 

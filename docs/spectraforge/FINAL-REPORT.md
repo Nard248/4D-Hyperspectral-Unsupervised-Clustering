@@ -56,9 +56,15 @@ regime + the masked-MLP recipe; the AE's clean advantage is noise-dependent, not
 >    (clutter + ~10 labels/class). Band selection is a **compression** tool, not an accuracy tool.
 > 3. **The AE+perturbation is not distinctly best in any regime**, and its lone "nonlinear reabsorption
 >    edge over PCA" (doc 18 / §13) **did not reproduce at 3 seeds** (AE *below* PCA). 
-> 4. **Recommendation:** use **regime-matched *supervised* selection** — marginal mutual-information for
->    clutter/linear confounds, **RF-importance for nonlinear** structure — and always benchmark against
->    **random** and **full-data**. The unsupervised AE idea, while sound, is dominated by simpler methods.
+> 4. **Even as a *denoiser* the AE adds nothing over PCA.** Classifying on the AE reconstruction helps
+>    +0.13 on *clean* data, but that is *linear* low-rank denoising — **PCA-reconstruction(8) does it as
+>    well or better**; the AE's nonlinearity adds nothing, and it helps only on clean data.
+> 5. **Recommendation:** **clean data →** low-rank PCA denoising + blind selection (or just full data);
+>    **cluttered/realistic data →** regime-matched ***supervised*** selection (marginal MI for clutter,
+>    RF-importance for nonlinear) — the only thing that beats random. Selection is a **compression** tool,
+>    not an accuracy tool, and is **unstable** under clutter (use regions/consensus). Always benchmark
+>    against **random** and **full-data**. The unsupervised AE+perturbation idea, while sound and fully
+>    debugged, is **dominated by simpler (PCA / supervised) methods in every role and regime tested.**
 >
 > The narrative below documents how the method was debugged and made competitive; the overnight addendum
 > is the **current, significance-tested bottom line** and supersedes the more optimistic claims in §§10–13
