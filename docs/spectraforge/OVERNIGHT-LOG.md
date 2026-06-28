@@ -140,7 +140,15 @@ idea *work* is to make it **supervised**: an AE with a classification head whose
 class-relevant structure, then perturbation finds class-relevant bands (and can capture nonlinear/joint
 structure marginal `mutInfo` misses). → **M-sup** (running).
 
-### M-sup — supervised AE + perturbation (the working version, running)
+### M-sup — supervised AE + perturbation (the working version)
+
+**Smoke (clutter, 1 seed, undertrained):** supAE* 0.578 ≈ mutInfo* 0.583 (tie), > RFimp* 0.553, < full
+0.613. On clutter (≈linear) supAE just matches marginal MI — expected. **The decisive test is FRET**
+(nonlinear/XOR): the supAE's classifier head should learn the interaction and its perturbation should
+highlight *both* interacting dyes' bands — which marginal `mutInfo` cannot see (it failed on FRET; only
+`RFimp` won). If supAE ≥ RFimp on FRET *and* ties mutInfo on clutter, it's a **unified supervised
+selector that wins where each baseline fails** — the genuine "it works" result. Full run (3 seeds,
+clutter+FRET, 400 ep) in progress.
 
 ---
 
