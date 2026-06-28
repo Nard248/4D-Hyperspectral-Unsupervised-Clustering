@@ -74,6 +74,21 @@ Round 1 closed the negatives (blind ≈ random under clutter; use supervised mut
 
 _(Round-2 entries appended below as they complete.)_
 
+### H16 — the AE as a DENOISER (a genuine positive!) + H16b control running
+
+| regime | raw-full | AErec-full | raw-PCA | AErec-PCA | Δfull |
+|--------|---------:|-----------:|--------:|----------:|------:|
+| clean | 0.755 | **0.879** | 0.699 | **0.901** | **+0.124** |
+| clutter | 0.594 | 0.544 | 0.549 | 0.516 | −0.050 |
+
+**The AE's first substantial, defensible win.** Used as a **denoiser** (classify on the AE
+reconstruction, not select bands), it **lifts accuracy +0.124 on clean data** (and AErec+PCA = 0.901, the
+best result in the whole program) — the bottleneck filters per-band noise off the signal manifold. Under
+clutter it *hurts* (−0.050: the high-variance clutter passes through the latent). So the AE's value is
+**nonlinear denoising preprocessing in the clutter-free regime**, NOT band selection. → H16b tests the
+crucial control: does the AE's *nonlinearity* beat *linear* (PCA-reconstruction) denoising? If yes, it's
+a real AE contribution. (Caveat to confirm.)
+
 ### ROUND-2 CONCLUSION — the decision map + the honest verdict
 
 Combining H15 (clutter-robust), H10 (supervised-nonlinear), H12 (phase map):
