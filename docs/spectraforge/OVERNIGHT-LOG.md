@@ -55,7 +55,30 @@ collapses blind selection to random.
 
 ---
 
-## Detailed log (newest first)
+## Round 2 — continuing (constructive follow-ups to round 1)
+
+Round 1 closed the negatives (blind ≈ random under clutter; use supervised mutInfo). Round 2 chases the
+*constructive* leads, newest first.
+
+**Round-2 hypotheses:**
+- **H15 (running): clutter-robust UNSUPERVISED selection.** Project out the top-K (clutter) PCA subspace,
+  select bands on the residual (signal subspace). Can unsupervised selection be *rescued* to beat random
+  under clutter? — the most valuable lead (revives the label-free use case).
+- **H10: supervised NONLINEAR selector vs marginal mutInfo on nonlinear data.** mutInfo is per-band
+  (misses interactions); on reabsorption/FRET a nonlinear supervised selector (RFE, mutInfo-on-AE-latent,
+  supervised-AE) should win. The AE's last best shot — made supervised.
+- **H12: when is supervision worth it?** Supervised−blind gap vs (label budget × clutter) — a phase map.
+- **H13: stability** of supervised vs blind selection (Kuncheva/Jaccard) — does mutInfo also select
+  consistently, or is it noisy at few labels?
+- **H14: spectral-angle (SAM) classifier** — does the real-world distance metric change the picture?
+
+_(Round-2 entries appended below as they complete.)_
+
+### H15 — clutter-robust unsupervised selection (running)
+
+---
+
+## Detailed log — Round 1 (newest first)
 
 ### beat-random — does blind selection beat random? (k=24, few-shot 30/class, 12 random draws)
 
