@@ -6,11 +6,15 @@ Usage:  python reports/md_to_docx.py <input.md> <output.docx>
 """
 from __future__ import annotations
 
+import os
 import re
 import sys
 
 from docx import Document
-from docx.shared import Pt, RGBColor
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.shared import Inches, Pt, RGBColor
+
+_IMG = re.compile(r"^!\[(.*?)\]\((.*?)\)\s*$")
 
 _INLINE = re.compile(r"(\*\*.+?\*\*|`[^`]+`)")
 
@@ -53,6 +57,20 @@ def convert(md_path, docx_path):
         stripped = line.strip()
 
         if not stripped:
+            i += 1
+            continue
+
+        # image: ![caption](path)
+        mimg = _IMG.match(stripped)
+        if mimg:
+            cap, rel = mimg.group(1), mimg.group(2)
+            path = rel if os.path.isabs(rel) else os.path.join(os.path.dirname(os.path.abspath(md_path)), rel)
+            if os.path.exists(path):
+                p = doc.add_paragraph(); p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                p.add_run().add_picture(path, width=Inches(6.0))
+                if cap:
+                    c = doc.add_paragraph(); c.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                    r = c.add_run(cap); r.italic = True; r.font.size = Pt(9)
             i += 1
             continue
 

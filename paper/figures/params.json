@@ -1,0 +1,205 @@
+{
+  "fig_fluorophores": {
+    "D1": {
+      "ex_peak": 470,
+      "ex_fwhm": 35,
+      "em_peak": 515,
+      "em_fwhm": 45,
+      "extinction": 0.5,
+      "qy": 0.45
+    },
+    "D2": {
+      "ex_peak": 488,
+      "ex_fwhm": 35,
+      "em_peak": 535,
+      "em_fwhm": 45,
+      "extinction": 0.5,
+      "qy": 0.45
+    },
+    "D3": {
+      "ex_peak": 506,
+      "ex_fwhm": 35,
+      "em_peak": 555,
+      "em_fwhm": 45,
+      "extinction": 0.5,
+      "qy": 0.45
+    },
+    "NADH": {
+      "ex_peak": 405,
+      "ex_fwhm": 60,
+      "em_peak": 445,
+      "em_fwhm": 70,
+      "extinction": 1.0,
+      "qy": 0.8
+    },
+    "lipofuscin": {
+      "ex_peak": 488,
+      "ex_fwhm": 80,
+      "em_peak": 665,
+      "em_fwhm": 85,
+      "extinction": 1.0,
+      "qy": 0.8
+    }
+  },
+  "fig_scene": {
+    "seed": 1,
+    "size": 64,
+    "em_step": 5,
+    "nuisance_amp": 1.2,
+    "photon_scale": 2000,
+    "read_sigma": 0.005,
+    "excitations": [
+      405.0,
+      470.0,
+      488.0,
+      506.0
+    ],
+    "em_range_nm": [
+      420,
+      700
+    ],
+    "n_features": 228,
+    "var_info_corr": -0.09960205555519096
+  },
+  "fig_clutter": {
+    "seed": 1,
+    "size": 64,
+    "em_step": 2,
+    "nuisance_amp": 1.2,
+    "photon_scale": 2000,
+    "read_sigma": 0.005,
+    "clutter_modes": 36,
+    "clutter_amp": 3.3
+  },
+  "fig_reabsorption": {
+    "seed": 1,
+    "size": 48,
+    "em_step": 2,
+    "nuisance_amp": 0.5,
+    "photon_scale": 20000,
+    "read_sigma": 0.002,
+    "reabsorption_strength": 4.0
+  },
+  "fig_results": {
+    "beat_random": {
+      "regime": [
+        "clean",
+        "low",
+        "moderate",
+        "high",
+        "severe"
+      ],
+      "random95": [
+        0.573,
+        0.479,
+        0.574,
+        0.587,
+        0.592
+      ],
+      "PCA": [
+        0.699,
+        0.47,
+        0.539,
+        0.549,
+        0.549
+      ],
+      "AE": [
+        0.655,
+        0.449,
+        0.548,
+        0.575,
+        0.569
+      ],
+      "mutInfo": [
+        0.696,
+        0.504,
+        0.576,
+        0.604,
+        0.615
+      ]
+    },
+    "compression": {
+      "k": [
+        4,
+        8,
+        12,
+        16,
+        24,
+        32,
+        48,
+        64,
+        100
+      ],
+      "PCA": [
+        0.453,
+        0.517,
+        0.552,
+        0.572,
+        0.606,
+        0.616,
+        0.647,
+        0.656,
+        0.662
+      ],
+      "AE": [
+        0.467,
+        0.532,
+        0.552,
+        0.573,
+        0.616,
+        0.632,
+        0.639,
+        0.657,
+        0.667
+      ],
+      "mutInfo": [
+        0.495,
+        0.571,
+        0.604,
+        0.622,
+        0.659,
+        0.658,
+        0.673,
+        0.68,
+        0.68
+      ],
+      "random": [
+        0.461,
+        0.509,
+        0.547,
+        0.581,
+        0.638,
+        0.618,
+        0.636,
+        0.662,
+        0.668
+      ],
+      "full": 0.683
+    },
+    "spatial": {
+      "method": [
+        "per-pixel\nvariance",
+        "per-pixel\nmutInfo",
+        "random",
+        "texture-var",
+        "texture-MI",
+        "spatial-CNN",
+        "oracle"
+      ],
+      "F1": [
+        0.516,
+        0.517,
+        0.71,
+        0.657,
+        0.688,
+        0.534,
+        0.751
+      ]
+    },
+    "source_scripts": [
+      "beat_random.py",
+      "compression_curve.py",
+      "spatial_regime.py"
+    ]
+  }
+}
