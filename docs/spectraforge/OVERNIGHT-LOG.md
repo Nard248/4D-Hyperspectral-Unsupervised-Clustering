@@ -37,12 +37,21 @@ necessary and clearly effective.** The AE+perturbation is competitive-with-PCA b
 better except on nonlinear structure. This is the strongest, most decision-relevant result of the whole
 program.
 
-**Recommendation / next moves.** (a) Pivot to **supervised/semi-supervised selection using the ROI
-labels** you already have — it's the only thing that beats random *and* full at low budgets, and
-compresses best. (b) A proper **supervised AE** (latent + classifier head, not few-label re-ranking) is
-worth one clean test. (c) **Real-data validation** remains the decisive gate, now evaluated with this
-honest battery (must include the *random* baseline). (d) Confirm the **resolution-redundancy** mechanism
-(running) — if true, it's a clean, publishable insight about *when* band selection helps at all.
+**WHAT TO ACTUALLY USE (the constructive answer, `what_works.py`).** A clear winner emerged:
+**supervised mutual-information selection** beats random in *every* regime and **beats full-data under
+clutter** (0.604 vs 0.594) — simple, robust, label-aware. Blind PCA/AE beat random *only* clutter-free
+(PCA ≥ AE there); even supervised RF-importance fails under clutter (only the robust marginal `mutInfo`
+survives). **The AE+perturbation is never distinctly the best selector in the few-shot framework.**
+
+**Recommendation / next moves.** (a) For real noisy ME-HSI, **use supervised `mutInfo` band selection
+on the ROI labels you already have** — it's the robust winner and the only method that beats both random
+and full-data under clutter. (b) The blind AE+perturbation is *not* the recommended tool; its one
+rigorously-significant edge is the **nonlinear reabsorption regime under the fair-panel CV metric**
+(doc 18) — worth a *supervised-AE* (latent + head) test specifically there, but the few-shot evidence
+here is unpromising. (c) **Real-data validation** remains the decisive gate — evaluate with this honest
+battery, and **always include the random baseline** (the night's biggest lesson: without it, you can
+mistake clutter-fitting for selection). (d) Mechanism confirmed: **clutter, not resolution**, is what
+collapses blind selection to random.
 
 ---
 
@@ -76,6 +85,29 @@ resolution under clutter → the cause is the **clutter itself** (class-irreleva
 that misleads every unsupervised criterion), not high resolution. Honest: hypothesis tested and rejected;
 correct mechanism identified. → launched `what_works.py` (the constructive counterpart: which selector to
 actually use per regime; does a supervised *nonlinear* selector win on nonlinear data?).
+
+### what_works — the constructive answer (k=24, few-shot 30/class, best-NL F1)
+
+| regime | random / 95th | full-564 | PCA | AE | mutInfo* | RFimp* | beats random |
+|--------|---------------|---------:|----:|---:|---------:|-------:|--------------|
+| clean | 0.508 / 0.576 | 0.755 | **0.699** | 0.655 | 0.696 | 0.668 | all |
+| clutter | 0.563 / 0.588 | 0.594 | 0.549 | 0.575 | **0.604** | 0.569 | **only mutInfo** |
+| nonlinear | 0.365 / 0.381 | 0.419 | **0.396** | 0.388 | 0.384 | 0.382 | all |
+
+**Verdict:** **supervised `mutInfo` is the robust winner** — beats random everywhere and beats full-data
+under clutter. Blind PCA/AE work only clutter-free (PCA ≥ AE). Even supervised RF-importance fails under
+clutter (30-label/564-feature importances are too noisy; marginal MI is robust). The AE is never
+distinctly best. This is the constructive close to the night: **use label-aware MI selection.**
+
+---
+
+## Session status: CONVERGED
+
+The hypotheses converged to a clear, consistent, honest conclusion (above). Remaining agenda items
+(H3 AE-config tuning, H5 redundancy, H6 consensus) are **deprioritised** — the core finding (blind
+selection ≈ random under clutter; the AE is not distinctly better) undercuts their value. The one
+worthwhile future test is a **supervised-AE on the nonlinear regime with the fair-panel metric**. I have
+**stopped launching new runs** rather than burn compute on marginal confirmations; the picture is solid.
 
 ---
 
