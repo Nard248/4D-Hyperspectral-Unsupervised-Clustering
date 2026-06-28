@@ -21,9 +21,10 @@ emerged.
    RANDOM band selection.** In every cluttered regime (L2–L5) neither AE nor PCA exceeds the 95th
    percentile of random 24-band subsets; **only the supervised `mutInfo` selector beats random.** Blind
    selection beats random *only* in the pristine, clutter-free L1 case (where PCA is best). (beat-random)
-   - Likely mechanism (being confirmed): **high spectral resolution → massive redundancy**; with 564
-     bands the signal is smeared across so many that a random subset captures it, and clutter masks any
-     unsupervised criterion.
+   - **Mechanism (confirmed, doc-test below): it's the CLUTTER, not resolution.** Re-tested at 564/228/116
+     bands — blind selection fails to beat random at *every* resolution under clutter. Fixed-pattern
+     clutter creates high-variance class-irrelevant structure that variance / PCA-loadings / AE-recon all
+     rank highly, so unsupervised selection picks clutter bands ≈ randomly w.r.t. class. Only labels escape it.
 4. **AE ≈ PCA everywhere.** PCA is better on clean (significantly), they tie under clutter (the AE−PCA
    margin improves with clutter but never reaches a significant win), and the AE's *only* distinctive
    significant advantage remains the **nonlinear reabsorption regime** (doc 18). (H2, H4, beat-random)
@@ -60,7 +61,21 @@ honest battery (must include the *random* baseline). (d) Confirm the **resolutio
 **Verdict:** blind AE/PCA beat random **only** in pristine L1; under any clutter they collapse to random,
 while supervised `mutInfo` beats random throughout. The single most important honesty result of the
 night. (Machinery validated: L1 shows PCA clearly above random, so the test detects a good selection.)
-→ resolution-effect test launched to confirm the high-resolution-redundancy mechanism.
+→ resolution-effect test launched to confirm the mechanism.
+
+### resolution-effect — is it redundancy (resolution) or clutter? (L4-high, k=24)
+
+| em_step | nbands | random | PCA | AE | mutInfo* | blind>random |
+|--------:|-------:|-------:|----:|---:|---------:|--------------|
+| 2 | 564 | 0.563 | 0.549 | 0.575 | 0.604 | no |
+| 5 | 228 | 0.563 | 0.544 | 0.558 | 0.601 | no |
+| 10 | 116 | 0.567 | 0.564 | 0.554 | 0.573 | no |
+
+**Verdict: REFUTES the resolution-redundancy hypothesis.** Blind selection fails to beat random at every
+resolution under clutter → the cause is the **clutter itself** (class-irrelevant high-variance structure
+that misleads every unsupervised criterion), not high resolution. Honest: hypothesis tested and rejected;
+correct mechanism identified. → launched `what_works.py` (the constructive counterpart: which selector to
+actually use per regime; does a supervised *nonlinear* selector win on nonlinear data?).
 
 ---
 
