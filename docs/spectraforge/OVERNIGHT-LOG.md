@@ -108,6 +108,22 @@ AE/CAE's value is now precisely mapped.
 reliably find the texture bands — a proper **supervised spatial CAE** with leakage-free (block-CV)
 selection, and finer class regions to kill spurious spatial-MI. That completes the spatial-selector win.
 
+### M-spatial-CAE — and the deepest truth of the program
+
+Built a supervised spatial CNN (convs model texture) + perturbation band-influence (the original idea,
+proper form). Smoke (block-CV): spatial-CAE* 0.539 > per-pixel mutInfo 0.428 (beats the blind method),
+but < texture-MI 0.578 < random 0.557 < oracle 0.682, and **still finds only 17% of the disc bands.**
+
+**The deepest, honest truth (after ~32 experiments):** the per-pixel-*blindness* to spatial structure is
+robust and provable — **but reliably IDENTIFYING which bands carry the discriminative structure (the
+selection task itself) is hard for EVERY method, per-pixel and spatial alike.** The value lives in
+*using* the right bands (oracle wins), not in any selector being magic. **No band-selection method —
+AE, CAE, PCA, mutInfo, RF-importance, or a supervised spatial CNN — reliably and decisively solves the
+selection problem on hard (subtle/spatial) data; only the label-knowing oracle does.** This is the
+program's terminal finding: band *selection* is intrinsically hard and not where a learned model
+(AE/CAE) provides a decisive, reliable edge. The CAE's one robust, structural contribution is
+*classification* of spatial structure (where per-pixel methods provably fail) — its proper role.
+
 ---
 
 ## Round 3 — failure analysis + mitigation campaign (synthetic-only; full model+data freedom)
