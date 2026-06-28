@@ -74,7 +74,21 @@ Round 1 closed the negatives (blind ≈ random under clutter; use supervised mut
 
 _(Round-2 entries appended below as they complete.)_
 
-### H15 — clutter-robust unsupervised selection (running)
+### H15 — clutter-robust unsupervised selection (near-miss)
+
+| L4-high (random µ/95th = 0.563/0.587) | | L5-severe (0.569/0.592) | |
+|---|---:|---|---:|
+| pca_load (vanilla) | 0.559 | pca_load | 0.567 |
+| **pcaRes10** | **0.581** | **pcaRes20** | **0.576** |
+| pcaRes40 | 0.542 | pcaRes40 | 0.556 |
+| mutInfo* | 0.604 ✓ | mutInfo* | 0.615 ✓ |
+
+**Verdict:** projecting out the top ~10–20 (clutter) PCs and selecting on the residual **lifts blind PCA
+selection meaningfully** (0.559→0.581, 0.567→0.576) — confirming the clutter mechanism (remove clutter →
+selection improves) — **but it does NOT cross random's 95th percentile.** Removing too many PCs (40–80)
+*hurts* (takes signal with the clutter). So clutter-suppression is a **partial rescue, not a fix**: under
+clutter, unsupervised selection still can't beat random; labels remain necessary. Optimal K ≈ clutter
+mode count. → H10 (the AE's last shot: supervised/nonlinear selectors on nonlinear data) next.
 
 ---
 
