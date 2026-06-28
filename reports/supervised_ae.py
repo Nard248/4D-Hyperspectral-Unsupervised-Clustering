@@ -106,6 +106,7 @@ def main():
     for seed in seeds:
         for reg, (sp, y) in regimes(seed, smoke).items():
             X, colmap = feature_matrix(sp)
+            nb = X.shape[1]
             roi = roi_mask(seed, SIZE); Xr, yr = X[roi], y[roi]
             Xstd = StandardScaler().fit_transform(Xr)
             for r in range(REPEATS):
@@ -119,11 +120,11 @@ def main():
                 rf = RandomForestClassifier(200, random_state=seed, n_jobs=-1)
                 with open(os.devnull, "w") as dn, contextlib.redirect_stdout(dn):
                     rf.fit(Xstd[L], yr[L])
-                sels = {"full": list(range(NBANDS)),
+                sels = {"full": list(range(nb)),
                         "mutInfo*": topn_diverse(MI, colmap, BUDGET),
                         "RFimp*": topn_diverse(rf.feature_importances_, colmap, BUDGET),
                         "supAE*": topn_diverse(infl, colmap, BUDGET),
-                        "random": list(rng.choice(NBANDS, BUDGET, replace=False))}
+                        "random": list(rng.choice(nb, BUDGET, replace=False))}
                 for m, cols in sels.items():
                     agg.setdefault((reg, m), []).append(evalc(Xr, yr, cols, L, T, seed))
     print("=" * 78)
