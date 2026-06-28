@@ -116,6 +116,32 @@ two mechanism-grounded mitigations:
   nonlinear manifold.** Test AE-embedding vs PCA-projection classification on strongly nonlinear data
   (where H16b's linear-denoising win should *not* hold).
 
+### M-repr — nonlinear AE embedding vs linear PCA: FAILED
+
+| feature (reabsorb-strong) | best-NL |
+|---------------------------|--------:|
+| raw | 0.513 |
+| **PCA-proj16 (linear)** | **0.586** |
+| AE-latent16 (nonlinear) | 0.513 (−0.073 vs PCA) |
+| AE-rec | 0.514 |
+
+The AE's nonlinear 16-D embedding is *no better than raw* and far below PCA's linear 16-D projection,
+even on nonlinear data. **Why:** the AE's *reconstruction* objective spends latent capacity on dominant
+variance (nuisances), not the class-relevant (often low-variance) structure; the nonlinearity has nothing
+to grip because the class signal isn't the dominant structure.
+
+### THE UNIFYING FINDING (all of Round 3 so far)
+
+**Every unsupervised method — PCA, AE-recon, AE-latent, contrastive — captures the DOMINANT VARIANCE, not
+the CLASS-RELEVANT structure.** When class ≠ dominant variance (clutter, nuisances, subtle nonlinearity —
+the realistic case), they all fail; only label-using methods find class-relevant structure. This is not a
+model deficiency; it is the definition of "unsupervised." → The only honest way to make the AE+perturbation
+idea *work* is to make it **supervised**: an AE with a classification head whose latent is forced to encode
+class-relevant structure, then perturbation finds class-relevant bands (and can capture nonlinear/joint
+structure marginal `mutInfo` misses). → **M-sup** (running).
+
+### M-sup — supervised AE + perturbation (the working version, running)
+
 ---
 
 ## Round 2 — continuing (constructive follow-ups to round 1)
