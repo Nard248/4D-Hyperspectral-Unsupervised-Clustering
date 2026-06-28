@@ -30,13 +30,13 @@ N_DISC = 6
 BUDGET = 12
 PER_CLASS = 40
 REPEATS = 4
-FREQS = [0.5, 0.18, 0.06]   # 3 classes: high / mid / low spatial frequency (same marginal)
+SCALES = [0.8, 2.5, 6.0]   # 3 classes: fine / medium / smooth texture scale (same global marginal)
 
 
-def textured(gen, freq):
-    n = gen.standard_normal((SIZE, SIZE))
-    t = n - gaussian_filter(n, 1.0 / freq)        # high-pass at the class frequency
-    return (t - t.mean()) / (t.std() + 1e-9)      # mean 0, std 1 -> identical per-pixel marginal
+def textured(gen, scale):
+    n = gaussian_filter(gen.standard_normal((SIZE, SIZE)), scale)   # smoothed noise at class scale
+    return (n - n.mean()) / (n.std() + 1e-9)                        # renormalize -> identical global marginal,
+    #                                                                 different spatial autocorrelation (texture)
 
 
 def build_spatial(seed):
@@ -50,14 +50,14 @@ def build_spatial(seed):
         if b in disc_bands:
             band = np.zeros((SIZE, SIZE))
             for c in range(3):                    # each class region gets ITS texture (same marginal)
-                t = textured(np.random.default_rng(seed * 97 + b * 13 + c), FREQS[c])
+                t = textured(np.random.default_rng(seed * 97 + b * 13 + c), SCALES[c])
                 m = (labels.reshape(SIZE, SIZE) == c)
                 band[m] = t[m]
-            X[:, b] = 0.6 * band.ravel()
-        else:                                     # nuisance band: bright class-irrelevant smooth field
-            f = gaussian_filter(gen.standard_normal((SIZE, SIZE)), gen.uniform(2, 6))
+            X[:, b] = 1.3 * band.ravel()          # strong texture signal
+        else:                                     # nuisance band: SMOOTH (no texture) class-irrelevant field
+            f = gaussian_filter(gen.standard_normal((SIZE, SIZE)), gen.uniform(8, 14))
             X[:, b] = 1.5 * ((f - f.mean()) / (f.std() + 1e-9)).ravel()
-    X += 0.1 * gen.standard_normal(X.shape)       # read noise
+    X += 0.05 * gen.standard_normal(X.shape)      # mild read noise
     return X, labels, disc_bands
 
 
@@ -72,12 +72,30 @@ def local_std(X, win=5):
     return out
 
 
+def _blocks(blocks=8):
+    bsz = SIZE // blocks
+    grid = (np.arange(SIZE)[:, None] // bsz) * blocks + (np.arange(SIZE)[None, :] // bsz)
+    return grid.ravel()                                   # block id per pixel
+
+
 def fewshot(F, y, cols, seed):
+    """SPATIAL-BLOCK CV: train and test on DISJOINT image blocks (removes spatial-autocorrelation
+    leakage). Train = PER_CLASS pixels from train-blocks; test = test-block pixels."""
+    bid = _blocks()
+    nb = bid.max() + 1
     out = []
     for r in range(REPEATS):
         rng = np.random.default_rng(seed * 100 + r)
-        tr = np.concatenate([rng.choice(np.where(y == c)[0], PER_CLASS, replace=False) for c in np.unique(y)])
-        te = np.setdiff1d(np.arange(len(y)), tr)
+        perm = rng.permutation(nb)
+        trbk = set(perm[:nb // 2].tolist())
+        tr_mask = np.isin(bid, list(trbk))
+        te_mask = ~tr_mask
+        try:
+            tr = np.concatenate([rng.choice(np.where(tr_mask & (y == c))[0], PER_CLASS, replace=False)
+                                 for c in np.unique(y)])
+        except ValueError:
+            continue                                      # a class missing from train blocks this draw
+        te = np.where(te_mask)[0]
         sc = StandardScaler().fit(F[tr][:, cols])
         Ftr, Fte = sc.transform(F[tr][:, cols]), sc.transform(F[te][:, cols])
         fs = []
@@ -85,7 +103,7 @@ def fewshot(F, y, cols, seed):
             with open(os.devnull, "w") as dn, contextlib.redirect_stdout(dn):
                 c.fit(Ftr, y[tr]); fs.append(f1_score(y[te], c.predict(Fte), average="macro"))
         out.append(max(fs))
-    return float(np.mean(out))
+    return float(np.mean(out)) if out else 0.0
 
 
 def main():
