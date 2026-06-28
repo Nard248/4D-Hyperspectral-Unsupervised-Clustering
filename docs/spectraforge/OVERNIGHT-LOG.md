@@ -161,7 +161,23 @@ fluorophore peaks at a few (ex,em) points + FRET + heavy clutter/noise) where fu
 random misses the signal, and a method that *finds the few nonlinear signal bands wins decisively*. This
 is where the supervised AE should win *big*, honestly (sparse concentrated signal is physically real).
 
-### M-sparse — does selection (and supAE) win BIG when the signal is sparse? (building)
+### M-sparse — the fundamental wall, re-confirmed
+
+Two retunes of a sparse regime: (a) dim dyes → signal unextractable → *everyone* ≈ chance (~0.6);
+(b) bright dyes → **`variance` wins (0.672, beats full+random)** because bright dye bands are high-variance,
+and supAE is the *worst* (0.598). **The wall:** a discriminative band is either bright (variance/PCA find
+it; AE unnecessary) or dim (unextractable; all fail). No regime makes the AE's *selection* mechanism both
+necessary and sufficient — "which bands matter" is a variance/relevance question simpler methods answer;
+the AE's nonlinearity only helps the *classifier* (selection ≠ classification). Confirmed across ~25
+experiments, 3 rounds.
+
+### THE one untested structural avenue → M-spatial
+
+Every experiment so far used **per-pixel** classification, where a spatial conv-AE has no inherent edge.
+The original idea was a **spatial CAE**. If class is carried by **spatial texture** in specific bands
+(same per-pixel marginal, different spatial pattern), then per-pixel variance/PCA/mutInfo are
+*fundamentally blind* to it — only a **spatial** model can find those bands. This is the one place the
+convolutional AE has a structural advantage no per-pixel baseline shares. → **M-spatial** (building).
 
 ---
 
