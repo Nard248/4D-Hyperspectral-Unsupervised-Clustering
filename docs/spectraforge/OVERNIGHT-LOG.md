@@ -84,10 +84,22 @@ _(Round-2 entries appended below as they complete.)_
 | **mutInfo*** | **0.595 (best)** |
 | mRMR* | 0.529 |
 
-**Verdict (1-seed; full run with FRET+CI in progress):** even on nonlinear data with the fair metric,
-**supervised `mutInfo` is the best selector**; the AE's edge over PCA is real but **tiny (+0.006)** and
-**no nonlinear/AE method tops supervision**. The AE's "last shot" doesn't change the round-1 conclusion:
-**use supervised mutInfo.** (mRMR's redundancy penalty actually hurts here.)
+**Full run (3 seeds + FRET, CV-panel best-NL):**
+
+| selector | reabsorb | fret |
+|----------|---------:|-----:|
+| pca_load | 0.597 | 0.656 |
+| AE | 0.569 (**−0.028** vs pca) | 0.660 (+0.004) |
+| mutInfo* | 0.579 | 0.584 |
+| **RFimp*** | **0.614** | **0.667** |
+
+**Verdict (revises doc 18):** (1) **the AE's doc-18 "nonlinear edge over PCA" does NOT robustly
+reproduce** — at 3 seeds it is *below* PCA on reabsorption (−0.028) and a tie on FRET. The lone AE win
+was config/seed-sensitive. (2) **`RF-importance` (supervised *nonlinear*) is the best selector on
+nonlinear data**, beating PCA, AE, and marginal `mutInfo`; marginal `mutInfo` is *poor* here (esp.
+FRET/XOR — per-band MI can't see interactions). **So the best selector is regime-matched supervision:
+marginal MI for clutter/linear, RF-importance for nonlinear.** The AE+perturbation is **not distinctly
+best in any regime** — the honest, near-final verdict of the whole program.
 
 ### H15 — clutter-robust unsupervised selection (near-miss)
 
