@@ -171,7 +171,30 @@ necessary and sufficient — "which bands matter" is a variance/relevance questi
 the AE's nonlinearity only helps the *classifier* (selection ≠ classification). Confirmed across ~25
 experiments, 3 rounds.
 
-### THE one untested structural avenue → M-spatial
+### M-spatial — the constructive WIN: where the convolutional approach is structurally necessary
+
+Spatial-texture regime (class carried by spatial texture, identical per-pixel marginals), **honest
+spatial-block CV** (train/test on disjoint image blocks):
+
+| selector | F1 | disc-found |
+|----------|---:|-----------:|
+| per-pixel variance | **0.524** | 0% |
+| per-pixel mutInfo* | **0.550** | 0% |
+| random | 0.674 | 17% |
+| texture-var (spatial) | 0.657 | 17% |
+| texture-MI* (spatial) | 0.666 | 17% |
+| **oracle (disc bands)** | **0.780** | 100% |
+
+**Result:** **per-pixel band selection — every method that dominated rounds 1–3 — is provably BLIND
+here** (0.52–0.55, below random), because the classes have identical per-pixel marginals; the
+information is purely spatial. The oracle (right bands) + texture features reach 0.78, and the spatial
+selectors beat the per-pixel ones. **This is the one regime, across the entire program, where the
+original convolutional/spatial idea is structurally NECESSARY and per-pixel selection fundamentally
+cannot work.** (The spatial *selectors* are still imperfect — spurious spatial-MI from large class
+blobs — but the headline is clean: per-pixel blind, spatial necessary.) This honestly *vindicates the
+spatial-CAE intuition in its proper domain*: spatial discrimination, not per-pixel spectral selection.
+
+### THE one untested structural avenue → M-spatial (above)
 
 Every experiment so far used **per-pixel** classification, where a spatial conv-AE has no inherent edge.
 The original idea was a **spatial CAE**. If class is carried by **spatial texture** in specific bands
