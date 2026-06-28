@@ -74,6 +74,21 @@ Round 1 closed the negatives (blind ≈ random under clutter; use supervised mut
 
 _(Round-2 entries appended below as they complete.)_
 
+### H10 — supervised/nonlinear selectors on nonlinear data (reabsorption, CV-panel best-NL; smoke)
+
+| method | best-NL |
+|--------|--------:|
+| pca_load | 0.560 |
+| AE | 0.566 (+0.006 vs pca) |
+| RFimp* | 0.586 |
+| **mutInfo*** | **0.595 (best)** |
+| mRMR* | 0.529 |
+
+**Verdict (1-seed; full run with FRET+CI in progress):** even on nonlinear data with the fair metric,
+**supervised `mutInfo` is the best selector**; the AE's edge over PCA is real but **tiny (+0.006)** and
+**no nonlinear/AE method tops supervision**. The AE's "last shot" doesn't change the round-1 conclusion:
+**use supervised mutInfo.** (mRMR's redundancy penalty actually hurts here.)
+
 ### H15 — clutter-robust unsupervised selection (near-miss)
 
 | L4-high (random µ/95th = 0.563/0.587) | | L5-severe (0.569/0.592) | |
