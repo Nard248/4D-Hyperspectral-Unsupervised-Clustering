@@ -32,23 +32,26 @@ from sweep_common import topn_diverse
 PER_CLASS = 30
 REPEATS = 4
 EXC = [405.0, 470.0, 488.0, 510.0, 530.0]
-D1 = Fluorophore("D1", ex_peak_nm=470, ex_fwhm_nm=28, em_peak_nm=520, em_fwhm_nm=10, extinction=0.7, quantum_yield=0.6)
-D2 = Fluorophore("D2", ex_peak_nm=510, ex_fwhm_nm=28, em_peak_nm=590, em_fwhm_nm=10, extinction=0.7, quantum_yield=0.6)
-NADH = Fluorophore("NADH", ex_peak_nm=405, ex_fwhm_nm=60, em_peak_nm=460, em_fwhm_nm=90, extinction=1.2, quantum_yield=0.9, em_skew=0.5)
-LIPO = Fluorophore("lipofuscin", ex_peak_nm=488, ex_fwhm_nm=80, em_peak_nm=640, em_fwhm_nm=110, extinction=1.2, quantum_yield=0.9, em_skew=0.4)
+# Discriminative dyes: NARROW peaks (few bands), readable brightness. Class = XOR(c1,c2) (nonlinear
+# LABEL) -> marginal MI is blind to them; variance picks the BRIGHTER nuisances; only a joint supervised
+# method finds these dim-but-discriminative bands.
+D1 = Fluorophore("D1", ex_peak_nm=470, ex_fwhm_nm=26, em_peak_nm=520, em_fwhm_nm=12, extinction=0.85, quantum_yield=0.7)
+D2 = Fluorophore("D2", ex_peak_nm=510, ex_fwhm_nm=26, em_peak_nm=590, em_fwhm_nm=12, extinction=0.85, quantum_yield=0.7)
+NADH = Fluorophore("NADH", ex_peak_nm=405, ex_fwhm_nm=60, em_peak_nm=460, em_fwhm_nm=90, extinction=1.3, quantum_yield=0.9, em_skew=0.5)
+LIPO = Fluorophore("lipofuscin", ex_peak_nm=488, ex_fwhm_nm=80, em_peak_nm=650, em_fwhm_nm=110, extinction=1.3, quantum_yield=0.9, em_skew=0.4)
 LIB = {"D1": D1, "D2": D2, "NADH": NADH, "lipofuscin": LIPO}
 
 
-def build_sparse(seed, size=SIZE, clutter_amp=2.5, clutter_modes=30, nuisance_amp=2.5):
+def build_sparse(seed, size=SIZE, clutter_amp=1.0, clutter_modes=20, nuisance_amp=2.0):
     acq = AcquisitionConfig(excitations=EXC, em_min=420, em_max=700, em_step=5)
     donor, acceptor = Material("D1", {"D1": 1.0}), Material("D2", {"D2": 1.0})
     nuis = [Material("NADH", {"NADH": 1.0}), Material("lipofuscin", {"lipofuscin": 1.0})]
     scene, labels, scatter = make_interaction_scene(donor, acceptor, nuis, size, size, seed,
-                                                    disc_amp=1.0, nuisance_amp=nuisance_amp, turbidity_amp=1.0)
-    artifacts = ArtifactConfig(rayleigh_strength=0.6, raman_strength=0.5, second_order=True,
-                               photon_scale=500, read_sigma=0.01)
+                                                    disc_amp=2.0, nuisance_amp=nuisance_amp, turbidity_amp=1.0)
+    artifacts = ArtifactConfig(rayleigh_strength=0.4, raman_strength=0.35, second_order=True,
+                               photon_scale=1500, read_sigma=0.004)
     spectra, gt = render(scene, LIB, acq, artifacts=artifacts, physics=PhysicsConfig(psf_sigma_px=1.0),
-                         seed=seed, scatter_field=scatter, fret_pairs=[("D1", "D2", 6.0)])
+                         seed=seed, scatter_field=scatter, fret_pairs=[("D1", "D2", 1.5)])
     if clutter_amp > 0:
         add_cube_clutter(spectra, size, seed, n_modes=clutter_modes, amp=clutter_amp)
     return spectra, labels.ravel()
