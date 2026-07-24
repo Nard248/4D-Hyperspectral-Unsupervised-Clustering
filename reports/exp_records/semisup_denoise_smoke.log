@@ -1,0 +1,109 @@
+====================================================================================================
+H1b AE-DENOISED RELEVANCE / LABEL EFFICIENCY — high-res 564b, ROI, k=24 (best-NL F1)
+question: does denoised few-label relevance beat raw relevance AND full at a smaller budget?
+====================================================================================================
+
+### L5-severe (clutter=4.5x44)
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+  labels/class= 25: full=0.566  PCA=0.508  AE=0.538  fewF-raw=0.524  fewF-den=0.527  AE+den=0.524  oracle*=0.595
+            Δvs full: fewF-raw=-0.041 fewF-den=-0.039 AE+den=-0.042 | beats full: ['oracle*']
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+  labels/class=100: full=0.857  PCA=0.753  AE=0.750  fewF-raw=0.770  fewF-den=0.763  AE+den=0.759  oracle*=0.790
+            Δvs full: fewF-raw=-0.087 fewF-den=-0.094 AE+den=-0.098 | beats full: none
+
+Goal: fewF-den (AE-denoised) beats full at a SMALLER label budget than fewF-raw => the AE
+buys label efficiency. AE+den should be >= fewF-raw at every budget.

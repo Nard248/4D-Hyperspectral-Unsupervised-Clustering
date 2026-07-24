@@ -1,0 +1,13 @@
+================================================================================
+BAND-COLLAPSE vs BAND-PRESERVING CAE on clean 3-dye (signal-band metric)
+oracle selF1=0.486; MLP-control signalCorr=0.492 (reference)
+================================================================================
+architecture                        signalCorr   selF1
+Training new autoencoder model. This may take several minutes...
+standard CAE (band-collapse, gelu)       0.001   0.331
+Model architecture mismatch: Error(s) in loading state_dict for DeepSpectralCAE:
+	Missing key(s) in state_dict: "enc_conv2.weight... Training new model.
+Training new autoencoder model. This may take several minutes...
+band-preserving CAE (no collapse)        0.104   0.414
+--------------------------------------------------------------------------------
+If no-collapse signalCorr >> collapse, the band-collapse was the reconstruction bottleneck.

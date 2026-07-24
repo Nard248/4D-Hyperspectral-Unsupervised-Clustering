@@ -1,0 +1,54 @@
+============================================================================================
+CAE CONFIG SEARCH — reconstruction R2 and selection F1 per variant per regime
+oracle F1: clean=0.486 realistic=0.470
+============================================================================================
+variant                     clean R2  clean F1   real R2   real F1
+Training new autoencoder model. This may take several minutes...
+Model architecture mismatch: Error(s) in loading state_dict for HyperspectralCAEWithMasking:
+	Missing key(s) in state_dict: "enc_... Training new model.
+Training new autoencoder model. This may take several minutes...
+default(pub)                  -0.315     0.331  -220.819     0.371
+Model architecture mismatch: Error(s) in loading state_dict for HyperspectralCAEWithMasking:
+	Missing key(s) in state_dict: "enc_... Training new model.
+Training new autoencoder model. This may take several minutes...
+Model architecture mismatch: Error(s) in loading state_dict for HyperspectralCAEWithMasking:
+	Missing key(s) in state_dict: "enc_... Training new model.
+Training new autoencoder model. This may take several minutes...
+no_dropout                    -0.411     0.336   -62.520     0.338
+Model architecture mismatch: Error(s) in loading state_dict for HyperspectralCAEWithMasking:
+	Missing key(s) in state_dict: "enc_... Training new model.
+Training new autoencoder model. This may take several minutes...
+Model architecture mismatch: Error(s) in loading state_dict for HyperspectralCAEWithMasking:
+	Missing key(s) in state_dict: "enc_... Training new model.
+Training new autoencoder model. This may take several minutes...
+no_sparsity                   -0.828     0.329   -20.072     0.398
+Model architecture mismatch: Error(s) in loading state_dict for HyperspectralCAEWithMasking:
+	Missing key(s) in state_dict: "enc_... Training new model.
+Training new autoencoder model. This may take several minutes...
+Model architecture mismatch: Error(s) in loading state_dict for HyperspectralCAEWithMasking:
+	Missing key(s) in state_dict: "enc_... Training new model.
+Training new autoencoder model. This may take several minutes...
+no_reg                        -0.634     0.347   -23.729     0.363
+Model architecture mismatch: Error(s) in loading state_dict for HyperspectralCAEWithMasking:
+	Missing key(s) in state_dict: "enc_... Training new model.
+Training new autoencoder model. This may take several minutes...
+Model architecture mismatch: Error(s) in loading state_dict for HyperspectralCAEWithMasking:
+	Missing key(s) in state_dict: "enc_... Training new model.
+Training new autoencoder model. This may take several minutes...
+no_reg_long                   -0.135     0.336    -1.618     0.391
+Model architecture mismatch: Error(s) in loading state_dict for HyperspectralCAEWithMasking:
+	Missing key(s) in state_dict: "enc_... Training new model.
+Training new autoencoder model. This may take several minutes...
+Model architecture mismatch: Error(s) in loading state_dict for HyperspectralCAEWithMasking:
+	Missing key(s) in state_dict: "enc_... Training new model.
+Training new autoencoder model. This may take several minutes...
+no_reg_long_k40               -0.124     0.337    -4.042     0.403
+Model architecture mismatch: Error(s) in loading state_dict for DeepSpectralCAE:
+	Missing key(s) in state_dict: "enc_conv1.385_0.... Training new model.
+Training new autoencoder model. This may take several minutes...
+Model architecture mismatch: Error(s) in loading state_dict for DeepSpectralCAE:
+	Missing key(s) in state_dict: "enc_conv1.405_0.... Training new model.
+Training new autoencoder model. This may take several minutes...
+nocollapse_no_reg_long        -0.270     0.330   -17.414     0.335
+--------------------------------------------------------------------------------------------
+Read: R2>0 => genuine reconstruction (not a mean predictor); F1 vs oracle => selection works.

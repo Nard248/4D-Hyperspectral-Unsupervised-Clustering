@@ -1,0 +1,9 @@
+================================================================================
+EXCEED pca_load — target realistic=0.486 clean=0.473 | oracle=0.502
+================================================================================
+method                    clean  realistic  beats pca?
+pca_load[k6] (ref)        0.473      0.486
+ae_denoise_var            0.501      0.360            
+ae_latent_clusterF        0.504      0.346            
+hybrid_infl_pca           0.504      0.473            
+ensemble_all              0.509      0.351            

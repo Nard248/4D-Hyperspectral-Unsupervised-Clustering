@@ -1,0 +1,9 @@
+======================================================================
+H13 SELECTION STABILITY (L4-high, 3 seeds) — mean pairwise Jaccard of 24-band sets
+======================================================================
+  PCA         Jaccard = 0.021
+  AE          Jaccard = 0.000
+  mutInfo*    Jaccard = 0.014
+  RFimp*      Jaccard = 0.036
+
+Higher = more consistent band choice across scenes (more trustworthy).

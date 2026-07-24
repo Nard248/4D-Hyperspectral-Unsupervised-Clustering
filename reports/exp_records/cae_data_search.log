@@ -1,0 +1,17 @@
+==============================================================================
+CAE DATA-COMPLEXITY LADDER (best config: no-reg, 500 epochs, k=40)
+==============================================================================
+Training new autoencoder model. This may take several minutes...
+  1dye           reconR2=  -0.922   CAE_F1=   nan  oracle=   nan
+Model architecture mismatch: Error(s) in loading state_dict for HyperspectralCAEWithMasking:
+	Missing key(s) in state_dict: "enc_... Training new model.
+Training new autoencoder model. This may take several minutes...
+  2dye           reconR2=  -0.707   CAE_F1= 0.662  oracle= 0.896
+Model architecture mismatch: Error(s) in loading state_dict for HyperspectralCAEWithMasking:
+	Missing key(s) in state_dict: "enc_... Training new model.
+Training new autoencoder model. This may take several minutes...
+  3dye           reconR2=  -0.074   CAE_F1= 0.601  oracle= 0.846
+  3dye+perpix    reconR2= -15.425   CAE_F1= 0.594  oracle= 0.643
+------------------------------------------------------------------------------
+If even 1dye (a single dense smooth field) has reconR2<=0, the spatial CAE architecture
+cannot reconstruct this data class at all — model-config-independent.

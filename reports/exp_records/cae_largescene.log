@@ -1,0 +1,12 @@
+======================================================================================
+CAE at REAL-DATA RESOLUTION (many chunks => real batched training)
+======================================================================================
+       regime    config      chunks      reconR2   CAE_F1   oracle
+Training new autoencoder model. This may take several minutes...
+  256px clean     default   chunks= 25  reconR2=  -0.008  CAE_F1=0.325  oracle=0.485
+  256px clean     no_reg    chunks= 25  reconR2=  -0.008  CAE_F1=0.325  oracle=0.485
+  256px realistic no_reg    chunks= 25  reconR2=-576.174  CAE_F1=0.322  oracle=0.480
+  512px clean     no_reg    chunks= 81  reconR2=  -0.145  CAE_F1=0.330  oracle=0.501
+--------------------------------------------------------------------------------------
+Compare reconR2 to the 64x64 single-chunk result (~ -0.1 clean / <0 realistic). If many
+chunks lift R2>0, single-chunk/batch=1 was the cause; if not, the architecture is.

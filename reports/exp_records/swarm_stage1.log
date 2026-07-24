@@ -1,0 +1,50 @@
+[swarm stage1] 40 configs | seeds=(1, 2) | TARGET pca_load realistic=0.490 clean=0.485 | oracle=0.500
+config                               clean  realistic    mean beats pca?
+flex a=relu m=0.0 L=6 d=2            0.367      0.376   0.371           
+flex a=relu m=0.0 L=6 d=4            0.327      0.432   0.379           
+flex a=relu m=0.0 L=12 d=2           0.325      0.405   0.365           
+flex a=relu m=0.0 L=12 d=4           0.327      0.387   0.357           
+flex a=relu m=0.5 L=6 d=2            0.511      0.446   0.478           
+flex a=relu m=0.5 L=6 d=4            0.492      0.436   0.464           
+flex a=relu m=0.5 L=12 d=2           0.476      0.440   0.458           
+flex a=relu m=0.5 L=12 d=4           0.421      0.400   0.411           
+flex a=gelu m=0.0 L=6 d=2            0.419      0.376   0.398           
+flex a=gelu m=0.0 L=6 d=4            0.331      0.415   0.373           
+flex a=gelu m=0.0 L=12 d=2           0.355      0.388   0.372           
+flex a=gelu m=0.0 L=12 d=4           0.331      0.440   0.385           
+flex a=gelu m=0.5 L=6 d=2            0.509      0.415   0.462           
+flex a=gelu m=0.5 L=6 d=4            0.501      0.340   0.421           
+flex a=gelu m=0.5 L=12 d=2           0.478      0.433   0.456           
+flex a=gelu m=0.5 L=12 d=4           0.429      0.350   0.390           
+flex a=silu m=0.0 L=6 d=2            0.479      0.349   0.414           
+flex a=silu m=0.0 L=6 d=4            0.323      0.397   0.360           
+flex a=silu m=0.0 L=12 d=2           0.429      0.381   0.405           
+flex a=silu m=0.0 L=12 d=4           0.320      0.380   0.350           
+flex a=silu m=0.5 L=6 d=2            0.505      0.366   0.436           
+flex a=silu m=0.5 L=6 d=4            0.485      0.351   0.418           
+flex a=silu m=0.5 L=12 d=2           0.483      0.390   0.437           
+flex a=silu m=0.5 L=12 d=4           0.417      0.343   0.380           
+flex a=leaky m=0.0 L=6 d=2           0.375      0.371   0.373           
+flex a=leaky m=0.0 L=6 d=4           0.341      0.437   0.389           
+flex a=leaky m=0.0 L=12 d=2          0.336      0.415   0.375           
+flex a=leaky m=0.0 L=12 d=4          0.332      0.453   0.392           
+flex a=leaky m=0.5 L=6 d=2           0.505      0.424   0.465           
+flex a=leaky m=0.5 L=6 d=4           0.489      0.426   0.457           
+flex a=leaky m=0.5 L=12 d=2          0.473      0.437   0.455           
+flex a=leaky m=0.5 L=12 d=4          0.448      0.418   0.433           
+flex a=elu m=0.0 L=6 d=2             0.511      0.350   0.430           
+flex a=elu m=0.0 L=6 d=4             0.381      0.386   0.384           
+flex a=elu m=0.0 L=12 d=2            0.466      0.412   0.439           
+flex a=elu m=0.0 L=12 d=4            0.309      0.371   0.340           
+flex a=elu m=0.5 L=6 d=2             0.458      0.362   0.410           
+flex a=elu m=0.5 L=6 d=4             0.493      0.361   0.427           
+flex a=elu m=0.5 L=12 d=2            0.476      0.433   0.455           
+flex a=elu m=0.5 L=12 d=4            0.490      0.354   0.422           
+
+BEST realistic: flex a=leaky m=0.0 L=12 d=4 = 0.453 (pca_load 0.490); BEST mean: flex a=relu m=0.5 L=6 d=2 = 0.478
+TOP-5 by mean:
+  flex a=leaky m=0.0 L=12 d=4        clean=0.332 realistic=0.453
+  flex a=relu m=0.5 L=6 d=2          clean=0.511 realistic=0.446
+  flex a=relu m=0.5 L=12 d=2         clean=0.476 realistic=0.440
+  flex a=gelu m=0.0 L=12 d=4         clean=0.331 realistic=0.440
+  flex a=leaky m=0.5 L=12 d=2        clean=0.473 realistic=0.437

@@ -1,0 +1,214 @@
+[grand_sweep] regimes=['clean', 'mild', 'realistic', 'dense'] seeds=(1, 2, 3) quick=False
+building datasets ...
+evaluating 66 configs | oracle mean F1 = 0.494
+  variance                       mean=0.385 vsOracle=0.78  [0.7s]
+  mean                           mean=0.384 vsOracle=0.78  [0.6s]
+  energy                         mean=0.384 vsOracle=0.78  [0.6s]
+  cv                             mean=0.324 vsOracle=0.66  [1.1s]
+  entropy[bins=16]               mean=0.365 vsOracle=0.74  [0.8s]
+  entropy[bins=32]               mean=0.365 vsOracle=0.74  [0.8s]
+  derivative                     mean=0.385 vsOracle=0.78  [0.7s]
+  pca_load[k=4,weighted=False]   mean=0.406 vsOracle=0.82  [1.1s]
+  pca_load[k=4,weighted=True]    mean=0.391 vsOracle=0.79  [0.9s]
+  pca_load[k=8,weighted=False]   mean=0.461 vsOracle=0.93  [1.3s]
+  pca_load[k=8,weighted=True]    mean=0.394 vsOracle=0.80  [0.8s]
+  pca_load[k=16,weighted=False]  mean=0.333 vsOracle=0.67  [1.3s]
+  pca_load[k=16,weighted=True]   mean=0.387 vsOracle=0.78  [0.8s]
+  pca_load[k=32,weighted=False]  mean=0.327 vsOracle=0.66  [1.8s]
+  pca_load[k=32,weighted=True]   mean=0.358 vsOracle=0.72  [0.9s]
+  sparsepca[k=4]                 mean=0.411 vsOracle=0.83  [15.8s]
+  sparsepca[k=8]                 mean=0.393 vsOracle=0.80  [68.9s]
+  sparsepca[k=16]                mean=0.347 vsOracle=0.70  [112.1s]
+  ica[k=4]                       mean=0.386 vsOracle=0.78  [1.4s]
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_fastica.py:132: ConvergenceWarning: FastICA did not converge. Consider increasing tolerance or the maximum number of iterations.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_fastica.py:132: ConvergenceWarning: FastICA did not converge. Consider increasing tolerance or the maximum number of iterations.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_fastica.py:132: ConvergenceWarning: FastICA did not converge. Consider increasing tolerance or the maximum number of iterations.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_fastica.py:132: ConvergenceWarning: FastICA did not converge. Consider increasing tolerance or the maximum number of iterations.
+  warnings.warn(
+  ica[k=8]                       mean=0.385 vsOracle=0.78  [1.8s]
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_fastica.py:132: ConvergenceWarning: FastICA did not converge. Consider increasing tolerance or the maximum number of iterations.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_fastica.py:132: ConvergenceWarning: FastICA did not converge. Consider increasing tolerance or the maximum number of iterations.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_fastica.py:132: ConvergenceWarning: FastICA did not converge. Consider increasing tolerance or the maximum number of iterations.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_fastica.py:132: ConvergenceWarning: FastICA did not converge. Consider increasing tolerance or the maximum number of iterations.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_fastica.py:132: ConvergenceWarning: FastICA did not converge. Consider increasing tolerance or the maximum number of iterations.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_fastica.py:132: ConvergenceWarning: FastICA did not converge. Consider increasing tolerance or the maximum number of iterations.
+  warnings.warn(
+  ica[k=16]                      mean=0.385 vsOracle=0.78  [2.4s]
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+  nmf[k=3]                       mean=0.409 vsOracle=0.83  [5.8s]
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+  nmf[k=5]                       mean=0.409 vsOracle=0.83  [5.5s]
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+  nmf[k=8]                       mean=0.410 vsOracle=0.83  [5.9s]
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\decomposition\_nmf.py:1723: ConvergenceWarning: Maximum number of iterations 400 reached. Increase it to improve convergence.
+  warnings.warn(
+  nmf[k=12]                      mean=0.411 vsOracle=0.83  [7.3s]
+  svd[k=8]                       mean=0.396 vsOracle=0.80  [0.8s]
+  svd[k=16]                      mean=0.403 vsOracle=0.82  [1.1s]
+  svd[k=32]                      mean=0.384 vsOracle=0.78  [1.1s]
+  parafac[rank=2]                mean=0.383 vsOracle=0.78  [4.2s]
+  parafac[rank=3]                mean=0.379 vsOracle=0.77  [7.1s]
+  parafac[rank=4]                mean=0.395 vsOracle=0.80  [1211.1s]
+  parafac[rank=6]                mean=0.392 vsOracle=0.79  [3590.6s]
+  parafac[rank=8]                mean=0.398 vsOracle=0.81  [3326.7s]
+  mrmr[alpha=0.3]                mean=0.377 vsOracle=0.76  [1.5s]
+  mrmr[alpha=0.6]                mean=0.409 vsOracle=0.83  [0.6s]
+  mrmr[alpha=1.0]                mean=0.408 vsOracle=0.83  [0.7s]
+  mrmr[alpha=2.0]                mean=0.403 vsOracle=0.81  [1.0s]
+  band_cluster[method=average]   mean=0.357 vsOracle=0.72  [1.2s]
+  band_cluster[method=ward]      mean=0.417 vsOracle=0.84  [1.1s]
+  band_cluster[method=complete]  mean=0.408 vsOracle=0.83  [1.1s]
+  maxvar_decorr[thresh=0.8]      mean=0.392 vsOracle=0.79  [0.8s]
+  maxvar_decorr[thresh=0.9]      mean=0.401 vsOracle=0.81  [0.7s]
+  maxvar_decorr[thresh=0.95]     mean=0.389 vsOracle=0.79  [0.6s]
+  laplacian[k_nn=5]              mean=0.384 vsOracle=0.78  [5.8s]
+  laplacian[k_nn=10]             mean=0.382 vsOracle=0.77  [0.9s]
+  cluster_fratio[k=4,pca=0,method=kmeans] mean=0.387 vsOracle=0.78  [1.7s]
+  cluster_fratio[k=4,pca=0,method=gmm] mean=0.386 vsOracle=0.78  [4.7s]
+  cluster_fratio[k=4,pca=8,method=kmeans] mean=0.384 vsOracle=0.78  [1.4s]
+  cluster_fratio[k=4,pca=8,method=gmm] mean=0.390 vsOracle=0.79  [1.5s]
+  cluster_fratio[k=6,pca=0,method=kmeans] mean=0.389 vsOracle=0.79  [1.5s]
+  cluster_fratio[k=6,pca=0,method=gmm] mean=0.392 vsOracle=0.79  [5.4s]
+  cluster_fratio[k=6,pca=8,method=kmeans] mean=0.388 vsOracle=0.79  [1.6s]
+  cluster_fratio[k=6,pca=8,method=gmm] mean=0.394 vsOracle=0.80  [1.7s]
+  cluster_fratio[k=10,pca=0,method=kmeans] mean=0.391 vsOracle=0.79  [4.2s]
+  cluster_fratio[k=10,pca=0,method=gmm] mean=0.392 vsOracle=0.79  [6.9s]
+  cluster_fratio[k=10,pca=8,method=kmeans] mean=0.393 vsOracle=0.80  [1.7s]
+  cluster_fratio[k=10,pca=8,method=gmm] mean=0.391 vsOracle=0.79  [2.2s]
+  ae_spectral                    mean=0.415 vsOracle=0.84  [26.0s]
+  ae_masked                      mean=0.425 vsOracle=0.86  [49.3s]
+  ae_masked_conv                 mean=0.440 vsOracle=0.89  [969.7s]
+  concrete_ae[epochs=250]        mean=0.415 vsOracle=0.84  [80.2s]
+  concrete_ae[epochs=250,hidden=256] mean=0.413 vsOracle=0.84  [100.1s]
+  stochastic_gates[lam=0.02]     mean=0.350 vsOracle=0.71  [110.9s]
+  stochastic_gates[lam=0.05]     mean=0.355 vsOracle=0.72  [110.0s]
+  stochastic_gates[lam=0.1]      mean=0.359 vsOracle=0.73  [110.3s]
+  bsnet                          mean=0.362 vsOracle=0.73  [83.7s]
+
+==== LEADERBOARD (oracle ceiling mean F1 = 0.494) ====
+rank  method                          mean F1 vsOracle   per-regime
+   1  pca_load[k=8,weighted=False]      0.461     0.93   0.43/0.47/0.48/0.46
+   2  ae_masked_conv                    0.440     0.89   0.49/0.42/0.43/0.42
+   3  ae_masked                         0.425     0.86   0.48/0.40/0.41/0.40
+   4  band_cluster[method=ward]         0.417     0.84   0.42/0.41/0.43/0.41
+   5  concrete_ae[epochs=250]           0.415     0.84   0.53/0.35/0.38/0.40
+   6  ae_spectral                       0.415     0.84   0.43/0.40/0.43/0.40
+   7  concrete_ae[epochs=250,hidden=256]    0.413     0.84   0.52/0.35/0.38/0.40
+   8  nmf[k=12]                         0.411     0.83   0.50/0.38/0.36/0.41
+   9  sparsepca[k=4]                    0.411     0.83   0.48/0.38/0.39/0.40
+  10  nmf[k=8]                          0.410     0.83   0.49/0.37/0.38/0.40
+  11  mrmr[alpha=0.6]                   0.409     0.83   0.48/0.36/0.41/0.39
+  12  nmf[k=3]                          0.409     0.83   0.50/0.34/0.38/0.42
+  13  nmf[k=5]                          0.409     0.83   0.50/0.36/0.38/0.41
+  14  mrmr[alpha=1.0]                   0.408     0.83   0.48/0.38/0.39/0.37
+  15  band_cluster[method=complete]     0.408     0.83   0.42/0.38/0.42/0.40
+  16  pca_load[k=4,weighted=False]      0.406     0.82   0.50/0.39/0.37/0.37
+  17  svd[k=16]                         0.403     0.82   0.48/0.42/0.35/0.36
+  18  mrmr[alpha=2.0]                   0.403     0.81   0.49/0.36/0.38/0.37
+  19  maxvar_decorr[thresh=0.9]         0.401     0.81   0.48/0.34/0.38/0.40
+  20  parafac[rank=8]                   0.398     0.81   0.48/0.39/0.36/0.36
+  21  svd[k=8]                          0.396     0.80   0.49/0.38/0.35/0.36
+  22  parafac[rank=4]                   0.395     0.80   0.49/0.35/0.37/0.37
+  23  pca_load[k=8,weighted=True]       0.394     0.80   0.50/0.34/0.35/0.38
+  24  cluster_fratio[k=6,pca=8,method=gmm]    0.394     0.80   0.51/0.34/0.37/0.36
+  25  sparsepca[k=8]                    0.393     0.80   0.38/0.40/0.41/0.38
+-> wrote C:\Users\meloy\PycharmProjects\spectral-select\reports\exp_records\grand_sweep.csv

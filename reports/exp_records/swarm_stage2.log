@@ -1,0 +1,22 @@
+[swarm stage2] 12 configs | seeds=(1, 2) | TARGET pca_load realistic=0.490 clean=0.485 | oracle=0.500
+config                               clean  realistic    mean beats pca?
+conv a=relu m=0.0 L=8 d=2            0.477      0.429   0.453           
+conv a=relu m=0.0 L=8 d=3            0.467      0.464   0.465           
+conv a=relu m=0.5 L=8 d=2            0.496      0.443   0.469           
+conv a=relu m=0.5 L=8 d=3            0.471      0.409   0.440           
+conv a=relu m=0.7 L=8 d=2            0.495      0.387   0.441           
+conv a=relu m=0.7 L=8 d=3            0.487      0.410   0.448           
+conv a=gelu m=0.0 L=8 d=2            0.501      0.446   0.473           
+conv a=gelu m=0.0 L=8 d=3            0.476      0.461   0.468           
+conv a=gelu m=0.5 L=8 d=2            0.502      0.423   0.462           
+conv a=gelu m=0.5 L=8 d=3            0.488      0.441   0.465           
+conv a=gelu m=0.7 L=8 d=2            0.505      0.400   0.453           
+conv a=gelu m=0.7 L=8 d=3            0.480      0.438   0.459           
+
+BEST realistic: conv a=relu m=0.0 L=8 d=3 = 0.464 (pca_load 0.490); BEST mean: conv a=gelu m=0.0 L=8 d=2 = 0.473
+TOP-5 by mean:
+  conv a=relu m=0.0 L=8 d=3          clean=0.467 realistic=0.464
+  conv a=gelu m=0.0 L=8 d=3          clean=0.476 realistic=0.461
+  conv a=gelu m=0.0 L=8 d=2          clean=0.501 realistic=0.446
+  conv a=relu m=0.5 L=8 d=2          clean=0.496 realistic=0.443
+  conv a=gelu m=0.5 L=8 d=3          clean=0.488 realistic=0.441

@@ -1,0 +1,30 @@
+======================================================================================
+PUSH HARDER — target ~0.486 (oracle) / 0.48 (pca_load). clean 3-dye, seed 1
+======================================================================================
+
+[A] band-preserving CAE (no collapse), 600 epochs — sweep selection knobs:
+Training new autoencoder model. This may take several minutes...
+  dimsel    pert           n_imp   selF1
+  variance  percentile        15   0.421
+  variance  percentile        40   0.420
+  variance  percentile        80   0.411
+  variance  standard_deviation    15   0.345
+  variance  standard_deviation    40   0.345
+  variance  standard_deviation    80   0.403
+  activationpercentile        15   0.338
+  activationpercentile        40   0.333
+  activationpercentile        80   0.328
+  activationstandard_deviation    15   0.342
+  activationstandard_deviation    40   0.333
+  activationstandard_deviation    80   0.328
+  pca       percentile        15   0.414
+  pca       percentile        40   0.413
+  pca       percentile        80   0.427
+  pca       standard_deviation    15   0.420
+  pca       standard_deviation    40   0.415
+  pca       standard_deviation    80   0.438
+  -> best band-preserving CAE selF1 = 0.438 at ('pca', 'standard_deviation', 80)  (oracle 0.486)
+
+[B] per-pixel collapse-bottleneck conv-AE over clean+realistic x 3 seeds:
+  clean      selF1 = 0.473 +- 0.018
+  realistic  selF1 = 0.418 +- 0.028

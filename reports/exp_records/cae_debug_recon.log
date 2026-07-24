@@ -1,0 +1,19 @@
+==============================================================================
+AUTOENCODER DEBUG — activation fix (no-reg, 200 epochs); reconstruction R2 + selection F1
+==============================================================================
+scene      hidden  output       reconR2      F1  oracle
+Training new autoencoder model. This may take several minutes...
+rank1      sigmoid sigmoid       -0.297     nan     nan
+rank1      relu    sigmoid       -1.508     nan     nan
+rank1      relu    identity   -1973.078     nan     nan
+rank1      gelu    identity    -303.824     nan     nan
+Model architecture mismatch: Error(s) in loading state_dict for HyperspectralCAEWithMasking:
+	Missing key(s) in state_dict: "enc_... Training new model.
+Training new autoencoder model. This may take several minutes...
+clean      sigmoid sigmoid       -0.167   0.331   0.486
+clean      relu    sigmoid       -2.827   0.360   0.486
+clean      relu    identity   -1539.253   0.341   0.486
+clean      gelu    identity    -230.219   0.347   0.486
+Model architecture mismatch: Error(s) in loading state_dict for HyperspectralCAEWithMasking:
+	Missing key(s) in state_dict: "enc_... Training new model.
+Training new autoencoder model. This may take several minutes...

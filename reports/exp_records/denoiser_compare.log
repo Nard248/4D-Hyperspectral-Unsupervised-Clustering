@@ -1,0 +1,15 @@
+============================================================================================
+H16b DENOISER COMPARE — raw vs PCA-recon(linear) vs AE-recon(nonlinear), full-data best-NL F1
+============================================================================================
+regime         raw   pcaR8  pcaR16   AErec   AE-raw  AE-pcaR8
+clean        0.755   0.888   0.868   0.879   +0.124    -0.009
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+low          0.569   0.525   0.577   0.547   -0.022    +0.021
+moderate     0.583   0.531   0.567   0.559   -0.024    +0.028
+C:\Users\meloy\PycharmProjects\spectral-select\.venv\Lib\site-packages\sklearn\neural_network\_multilayer_perceptron.py:785: ConvergenceWarning: Stochastic Optimizer: Maximum iterations (250) reached and the optimization hasn't converged yet.
+  warnings.warn(
+clutter      0.594   0.521   0.565   0.544   -0.050    +0.023
+
+AE-pcaR8 = AE-recon − PCA-recon(8). Positive on clean/moderate => nonlinear denoising beats
+linear denoising (a genuine AE win). Under clutter all denoisers expected to fail.

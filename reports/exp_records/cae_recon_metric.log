@@ -1,0 +1,20 @@
+==========================================================================================
+CAE RECONSTRUCTION, re-evaluated: POOLED (variance-weighted) R2 + activation/LR fixes
+==========================================================================================
+MLP control pooled-R2: rank1=0.343 clean=0.115  (near 1.0 => metric is sane and data is fittable)
+
+scene    hidden/out          pooledR2  signalCorr   selF1  oracle
+Model architecture mismatch: Error(s) in loading state_dict for HyperspectralCAEWithMasking:
+	Missing key(s) in state_dict: "enc_... Training new model.
+Training new autoencoder model. This may take several minutes...
+rank1    sigmoid/sigmoid       -0.065       0.026     nan     nan
+rank1    gelu/sigmoid         -19.397       0.344     nan     nan
+rank1    gelu/identity        -23.467       0.344     nan     nan
+Model architecture mismatch: Error(s) in loading state_dict for HyperspectralCAEWithMasking:
+	Missing key(s) in state_dict: "enc_... Training new model.
+Training new autoencoder model. This may take several minutes...
+clean    sigmoid/sigmoid       -0.071       0.012   0.343   0.486
+clean    gelu/sigmoid         -33.923       0.000   0.332   0.486
+clean    gelu/identity        -12.889       0.000   0.332   0.486
+------------------------------------------------------------------------------------------
+pooledR2 -> 1 and signalCorr -> 1 mean the CAE DOES reconstruct (fixes worked).

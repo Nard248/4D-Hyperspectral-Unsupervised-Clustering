@@ -1,0 +1,22 @@
+========================================================================================
+NONLINEAR regime (inner-filter + saturation) vs the same scene LINEAR — KNN macro-F1, 12 bands
+========================================================================================
+
+--- LINEAR (control) ---
+method                      KNN macro-F1   % disc-window
+variance                           0.351             25%
+pca_load[k6]                       0.486             89%
+AE+perturb (conv)                  0.461             69%
+oracle f_classif (lin)             0.493             92%
+oracle mutual_info (nl)            0.480             75%
+
+--- NONLINEAR (IFE+sat) ---
+method                      KNN macro-F1   % disc-window
+variance                           0.361             17%
+pca_load[k6]                       0.460             75%
+AE+perturb (conv)                  0.368             22%
+oracle f_classif (lin)             0.472             81%
+oracle mutual_info (nl)            0.450             53%
+
+Read: if NONLINEAR widens (AE - pca_load) and (mutual_info - f_classif) oracle gap vs LINEAR,
+the AE is exploiting nonlinear discriminative structure that the linear baseline cannot.

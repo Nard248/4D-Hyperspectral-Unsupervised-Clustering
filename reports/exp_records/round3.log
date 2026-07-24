@@ -1,0 +1,22 @@
+methods: ['robust_disc', 'barlow', 'derivative_pca', 'pca_load[k6]', 'ae_masked(C3)', 'variance']
+
+==== FULL BENCHMARK (4 regimes x 3 seeds; oracle 0.494) ====
+  robust_disc        mean=0.472 vsOracle=0.96  (0.48/0.44/0.49/0.47)
+  barlow             mean=0.475 vsOracle=0.96  (0.50/0.46/0.48/0.47)
+  derivative_pca     mean=0.464 vsOracle=0.94  (0.42/0.48/0.48/0.47)
+  pca_load[k6]       mean=0.477 vsOracle=0.97  (0.47/0.48/0.49/0.47)
+  ae_masked(C3)      mean=0.425 vsOracle=0.86  (0.48/0.40/0.41/0.40)
+  variance           mean=0.385 vsOracle=0.78  (0.49/0.34/0.35/0.35)
+
+==== GENERALIZATION (7 held-out regimes x 2 seeds) ====
+  regime            oracle robust_dis derivative pca_load[k   variance
+  g_2class           0.617      0.567      0.571      0.615      0.537
+  g_5class           0.281      0.248      0.231      0.265      0.233
+  g_highoverlap      0.451      0.418      0.423      0.456      0.370
+  g_lowoverlap       0.479      0.376      0.413      0.464      0.373
+  g_faint            0.366      0.330      0.343      0.329      0.404
+  g_heavynuis        0.430      0.372      0.370      0.387      0.404
+  g_lownoise         0.515      0.489      0.487      0.499      0.427
+  MEAN               0.449      0.400      0.405      0.431      0.393
+
+-> wrote C:\Users\meloy\PycharmProjects\spectral-select\reports\exp_records\round3_full.csv and C:\Users\meloy\PycharmProjects\spectral-select\reports\exp_records\round3_general.csv

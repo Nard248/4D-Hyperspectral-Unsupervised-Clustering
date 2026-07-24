@@ -1,0 +1,16 @@
+rank-1 cube (64, 64, 57); effective rank check: top-3 singular values [22.84  3.81  3.75] (rank-1 => one dominates)
+
+model                                  lr   final MSE   reconR2
+C:\Users\meloy\PycharmProjects\spectral-select\reports\cae_overfit_test.py:56: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\torch\csrc\autograd\generated\python_variable_methods.cpp:839.)
+  print(f"CAE {hid}/{out:<10}{'':<8}{lr:>7.0e}{float(loss):>12.5f}{r2(cube, rec):>10.3f}")
+CAE sigmoid/sigmoid             1e-03     0.00208     0.117
+CAE sigmoid/sigmoid             1e-02     0.00380     0.007
+CAE relu/sigmoid             1e-03     0.00175     0.170
+CAE relu/sigmoid             1e-02     0.00172     0.178
+CAE relu/identity            1e-03     0.00171     0.180
+CAE relu/identity            1e-02     0.00387     0.002
+CAE gelu/identity            1e-03     0.00175     0.171
+CAE gelu/identity            1e-02     0.00168     0.184
+
+CONTROL per-pixel MLP                1e-3     0.00163     0.195  (should be ~1.0 -> data is trivially fittable)
