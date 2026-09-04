@@ -1,0 +1,4 @@
+PAMAP2 LOSO PCA-loading baseline | KNN-5 macro-F1
+K=5	pca 	0.5181 +/- 0.1241
+K=7	pca 	0.5622 +/- 0.1150
+K=10	pca 	0.6276 +/- 0.1662

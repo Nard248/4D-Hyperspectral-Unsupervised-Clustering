@@ -9,7 +9,7 @@ These tests verify that:
 Run with:
     pytest tests/test_notebooks.py -v           # All tests
     pytest -m "not slow" tests/test_notebooks.py  # Skip slow tests
-    pytest --nbval-lax notebooks/examples/      # Full notebook execution
+    pytest --nbval-lax examples/                # Full notebook execution
 """
 
 from __future__ import annotations
@@ -53,6 +53,21 @@ class TestNotebookParseable:
         assert len(nb["cells"]) > 0, "Notebook has no cells"
         assert "metadata" in nb, "Notebook missing 'metadata' key"
         assert "nbformat" in nb, "Notebook missing 'nbformat' key"
+
+    def test_walkthrough_is_valid_json(self) -> None:
+        """Verify 03_hsi_data_walkthrough.ipynb is valid and guarded for missing data."""
+        nb_path = NOTEBOOKS_DIR / "03_hsi_data_walkthrough.ipynb"
+        assert nb_path.exists(), f"Notebook not found: {nb_path}"
+
+        with open(nb_path, encoding="utf-8") as f:
+            nb = json.load(f)
+
+        code_cells = [c for c in nb["cells"] if c.get("cell_type") == "code"]
+        assert len(code_cells) >= 20, f"Expected at least 20 code cells, found {len(code_cells)}"
+        source = "\n".join("".join(c.get("source", [])) for c in code_cells)
+        # The walkthrough must run without data and without PyImageJ (guarded sections).
+        assert "HAVE_IMAGEJ" in source and "HAVE_PROCESSED" in source
+        assert "build_demo" in source, "synthetic fallback missing"
 
     def test_quickstart_has_code_cells(self) -> None:
         """Verify quickstart notebook contains code cells."""
@@ -178,7 +193,7 @@ class TestNotebookMetadata:
 
     def test_notebooks_have_kernel_spec(self) -> None:
         """Verify notebooks have kernel specification."""
-        for nb_name in ["01_quickstart.ipynb", "02_validation.ipynb"]:
+        for nb_name in ["01_quickstart.ipynb", "02_validation.ipynb", "03_hsi_data_walkthrough.ipynb"]:
             nb_path = NOTEBOOKS_DIR / nb_name
 
             with open(nb_path, encoding="utf-8") as f:
@@ -192,7 +207,7 @@ class TestNotebookMetadata:
 
     def test_notebooks_are_nbformat_4(self) -> None:
         """Verify notebooks use nbformat version 4."""
-        for nb_name in ["01_quickstart.ipynb", "02_validation.ipynb"]:
+        for nb_name in ["01_quickstart.ipynb", "02_validation.ipynb", "03_hsi_data_walkthrough.ipynb"]:
             nb_path = NOTEBOOKS_DIR / nb_name
 
             with open(nb_path, encoding="utf-8") as f:

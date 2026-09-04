@@ -56,6 +56,14 @@ dev = [
 gui = [
     "PyQt6>=6.0",
 ]
+# Reading raw PerkinElmer/CRi Nuance .im3 cubes goes through Fiji's Bio-Formats
+# via PyImageJ, which needs a JDK + Apache Maven on the PATH (see docs/onboarding/SETUP.md).
+im3 = [
+    "pyimagej>=1.4",
+]
+all = [
+    "spectral-select[dev,gui,im3]",
+]
 
 [project.urls]
 Homepage = "https://github.com/narekmeloyan/spectral-select"

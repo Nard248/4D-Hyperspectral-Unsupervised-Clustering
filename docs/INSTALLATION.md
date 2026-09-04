@@ -1,5 +1,7 @@
 # Installation Guide
 
+> **Superseded.** The maintained, platform-by-platform guide is [`onboarding/SETUP.md`](onboarding/SETUP.md). It covers the Java + Maven stack that PyImageJ needs for `.im3` files, the `[gui]` / `[im3]` / `[all]` extras, GPU setup, where to get the data and a verification checklist. This page is kept for reference; where the two disagree, `onboarding/SETUP.md` is right.
+
 This guide walks you through installing Spectral-Select on your computer.
 
 ## System Requirements
@@ -99,13 +101,12 @@ python -c "from spectral_select import Analyzer, Config; print('Installation suc
 
 You should see: `Installation successful!`
 
-### Step 6: Install ImageJ/Fiji (Optional)
+### Step 6: Reading raw `.im3` files (optional)
 
-If you need to load raw `.im3` hyperspectral files:
-
-1. Download Fiji from [fiji.sc](https://fiji.sc/)
-2. Extract to a known location (e.g., `C:\Fiji` or `/Applications/Fiji.app`)
-3. The software will auto-detect Fiji, or you can specify the path in your code
+Raw Nuance `.im3` cubes are read through Fiji's Bio-Formats plugin via **PyImageJ**, which needs a JDK (Temurin 17)
+and Apache Maven on the PATH. Install them, then `pip install -e ".[im3]"`. The first `.im3` read downloads Fiji
+(about 350 MB) into `~/.jgo` and `~/.m2`; a desktop Fiji installation is neither required nor auto-detected.
+Details and troubleshooting: [`onboarding/SETUP.md`](onboarding/SETUP.md), section 4.
 
 ## GPU Support (Optional but Recommended)
 
@@ -163,7 +164,7 @@ The example notebooks are the easiest way to learn the software.
 jupyter notebook
 ```
 
-This opens a browser window. Navigate to `notebooks/examples/` and open the notebooks.
+This opens a browser window. Navigate to `examples/` and open the notebooks.
 
 ### Jupyter Keyboard Shortcuts
 
@@ -264,7 +265,7 @@ deactivate
 
 After installation:
 
-1. **Test with example data**: Open `notebooks/examples/01_quickstart.ipynb`
+1. **Test with example data**: Open `examples/01_quickstart.ipynb`
 2. **Prepare your data**: See [DATA_PROCESSING.md](guides/DATA_PROCESSING.md)
 3. **Learn the configuration options**: See [CONFIGURATION.md](CONFIGURATION.md)
 

@@ -70,7 +70,7 @@ pip install -e ".[dev]"
 
 The easiest way to get started is with the example notebooks:
 
-1. **Open the notebooks folder**: `notebooks/examples/`
+1. **Open the notebooks folder**: `examples/`
 2. **Start with data loading**: `00_data_loading.ipynb` - Learn how to load your data
 3. **Run wavelength selection**: `01_quickstart.ipynb` - Perform your first analysis
 4. **Validate results**: `02_validation.ipynb` - Compare to ground truth (if available)
@@ -293,7 +293,7 @@ Typical times:
 ## Getting Help
 
 - Check [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for common problems
-- Review the example notebooks in `notebooks/examples/`
+- Review the example notebooks in `examples/`
 - Open an issue on GitHub for bugs or feature requests
 
 ## Next Steps

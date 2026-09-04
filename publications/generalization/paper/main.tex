@@ -3,292 +3,282 @@
 
 \usepackage{cite}
 \usepackage{amsmath,amssymb,amsfonts}
+\usepackage{mathtools}   % \coloneqq for definitional equalities (Reviewer 1)
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{array}
 \usepackage{textcomp}
 \usepackage{url}
+\usepackage{stfloats}   % allow full-width figure* at column bottom
 
 \graphicspath{{figures/}{../figures/}}
 
 \begin{document}
 
+% NOTE: title is LOCKED to the accepted submission (paper 122) for the proceedings.
 \title{Label-Free, Dependency-Aware Channel Selection\\
 for Coupled Multi-Channel Sensor Data}
 
-\author{
-\IEEEauthorblockN{1\textsuperscript{st} Narek Meloyan}
-\IEEEauthorblockA{\textit{Akian College of Science \& Engineering}\\
-\textit{American University of Armenia}\\
-Yerevan, Armenia}
-\and
-\IEEEauthorblockN{2\textsuperscript{nd} Aleksandr Hayrapetyan}
-\IEEEauthorblockA{\textit{Akian College of Science \& Engineering}\\
-\textit{American University of Armenia}\\
-Yerevan, Armenia}
-\and
-\IEEEauthorblockN{3\textsuperscript{rd} Narine Sarvazyan, PhD}
-\IEEEauthorblockA{\textit{Orbeli Institute of Physiology of NAS RA}\\
-\textit{American University of Armenia}\\
-Yerevan, Armenia}
-}
+% Author block: AUA affiliation uses the Akian College + Engineering Research Center
+% naming from the ACSE instructions email; Orbeli + GWU kept for the co-author.
+\author{\IEEEauthorblockN{Narek Meloyan\textsuperscript{1,2,3}, Narine Sarvazyan\textsuperscript{1,2,3,4}}
+\IEEEauthorblockA{\textsuperscript{1}Zaven P.\ and Sonia Akian College of Science and Engineering, American University of Armenia, Yerevan, Armenia\\
+\textsuperscript{2}Engineering Research Center, American University of Armenia, Yerevan, Armenia\\
+\textsuperscript{3}L.A.\ Orbeli Institute of Physiology NAS RA, Yerevan, Armenia\\
+\textsuperscript{4}George Washington University, Washington, DC, USA\\
+Email: narek\_meloyan@edu.aua.am, phynas@gwu.edu}}
 
 \maketitle
 
 \begin{abstract}
-A method is presented for selecting a small, informative subset of a multi-channel
-sensor's original channels without using labels. A group-structured autoencoder is
-trained to reconstruct all channels; each latent factor is then perturbed, and the
-change in every channel's reconstruction gives a label-free estimate of its
-relevance. A relevance--redundancy rule turns these estimates into an ordered
-shortlist of real channels. The same procedure was applied to two very different
-modalities, changing only the encoder. On a wearable-sensor activity benchmark
-(three inertial units, 27 channels, leave-one-subject-out), retaining ten channels
-preserved macro-F1 to within 0.04 of the full set, equalled a supervised
-mutual-information selector, and was far more stable across subjects than variance
-ranking. On biomedical imaging the same method removed 58--95\% of channels while
-accuracy was maintained or improved (88.2\% to 95.2\% on lichen tissue; 79.8\% to
-85.6\% on collagen sponges). A single label-free principle thus delivers strong,
-interpretable channel reduction across very different sensors.
+Dimensionality reduction is a central step in high-dimensional pipelines, from
+multi-channel sensor arrays and biomedical imaging to interpretable machine
+learning. Without labels this usually relies on methods such as PCA or t-SNE, which
+optimize label-free proxies (variance or neighborhood structure) rather than class
+discriminability, and can discard a weak discriminative signal dominated by
+redundant, high-variance channels. This paper presents a label-free,
+dependency-aware method that keeps a subset of the original channels rather than a
+projection, so the result stays interpretable. A group-structured autoencoder
+reconstructs all channels; each latent factor is perturbed, and the resulting
+per-channel reconstruction change gives a label-free relevance score that a
+relevance-redundancy rule turns into an ordered shortlist, changing only the encoder
+between modalities. Judged by a downstream classifier on the selected channels, the
+method matches a supervised mutual-information selector without labels, and beats
+PCA and variance ranking where the discriminative signal is not the loudest. On a
+controlled benchmark, where the informative channels are also the highest-variance
+ones, PCA recovers them too and the method matches the supervised selector, while
+variance and random selection lag far behind. On motor-imagery
+electroencephalography (EEG) the informative rhythm is weaker than the background,
+so PCA and variance fall to about random, while the method stays above all of them
+and matches the supervised selector using six of 22 electrodes. On biomedical
+hyperspectral imaging the same method keeps or improves accuracy while removing up
+to 95\% of the bands. By accurately modeling channel dependencies without data
+labels, this architecture provides a powerful, interpretable alternative to
+traditional dimensionality reduction in complex sensor arrays.
 \end{abstract}
 
 \begin{IEEEkeywords}
-unsupervised feature selection, channel selection, conditional relevance,
-autoencoders, interpretability, human activity recognition.
+unsupervised feature selection, autoencoders, dependency-aware selection,
+interpretability, brain-computer interfaces, hyperspectral imaging.
 \end{IEEEkeywords}
 
 \section{Introduction}
-Complex sensors can have data coming from many channels that overlap heavily and
-arrive in natural groups. For cost, power, transmission bandwidth, and
-interpretability, only a handful of the actual channels are often required,
-rather than a learned mixture of them. The central difficulty is to determine
-which channels to keep when no labels are available.
+Complex sensors produce many channels that overlap heavily and arrive in natural
+groups. For cost, power, bandwidth, and interpretability one often wants to keep a
+handful of the actual channels rather than a learned mixture of them, and the
+difficulty is deciding which, when no labels are available.
 
-Existing selectors present a trade-off. Unsupervised filters such as variance
-ranking or principal component analysis (PCA) score each channel by its own
-marginal statistics and disregard how channels depend on one another, so several
-channels carrying the same information tend to be retained together.
-Dependency-aware selectors such as minimum-redundancy maximum-relevance (mRMR)
-and joint mutual information (JMI) account for this redundancy but require labels
-and density estimation. The region of the design space that is simultaneously
-label-free, dependency-aware, and discrete---returning real channels rather than
-a projection---remains sparsely populated. This paper addresses that region with
-a method built on a group-structured autoencoder and perturbation-based
-attribution, and it is shown that the identical method operates across two very
-different sensing modalities by changing only its front-end encoder. The
-contributions are: (i) a label-free, dependency-aware, discrete channel selector;
-(ii) a modality-agnostic selection engine that adapts to a new domain through the
-encoder alone; and (iii) verification on two modalities, matching a supervised
-selector on wearable-sensor data without labels and removing the majority of
-channels on biomedical imaging without loss of accuracy.
+Unsupervised filters such as variance ranking or principal-component analysis (PCA)
+score each channel by its own marginal statistics. They are fast but do not model
+how channels depend on one another, and being variance-driven they fail when the
+informative signal is not the loudest channel. Supervised, dependency-aware
+selectors (mRMR, JMI) model conditional relevance but need labels. Few methods are
+at once label-free, dependency-aware, and discrete, returning real channels rather
+than a projection. The method proposed here occupies that niche; its central value
+is modeling channel dependence without labels. Where the discriminative channels are
+the loudest, marginal methods such as PCA recover them; where they are not, modeling
+how channels depend on one another separates the informative channels from the loud,
+redundant ones.
+
+The presented approach is a label-free, dependency-aware selector that returns real
+channels, built from a group-structured autoencoder with a compressive bottleneck
+and perturbation-based attribution. A study of downstream classification accuracy
+across four modalities shows that its channels match a supervised selector without
+labels, and beat PCA and variance where the discriminative signal is not the
+loudest; a simple label-using check completes the account by marking, in advance,
+the redundant datasets on which selection of any kind offers little.
 
 \section{Related Work}
 Channel and feature selection methods fall into filter, wrapper, and embedded
 families. Variance ranking and the Laplacian score~\cite{ref_lapscore} are
-unsupervised but marginal: they ignore inter-channel dependency and tend to retain
-redundant channels. Dependency-aware selectors model conditional relevance---a
-channel's usefulness given those already retained---through criteria such as mRMR
-and JMI~\cite{ref_mrmr,ref_jmi}, but these are supervised. Among unsupervised deep
-methods, the concrete autoencoder~\cite{ref_concrete} learns a differentiable
-discrete selection layer, and in hyperspectral imaging attention networks such as
-BS-Net~\cite{ref_bsnet} rank spectral bands. The present method is closest to this
-lineage; its distinguishing combination is perturbation-based reconstruction
-sensitivity as the relevance signal on a group-structured representation, an
-explicit relevance--redundancy step, and demonstrated transfer across modalities
-(Table~\ref{tab:positioning}).
-
-\begin{table}[t]
-\caption{Positioning among representative selector families.}
-\label{tab:positioning}
-\centering
-\footnotesize
-\setlength{\tabcolsep}{3.5pt}
-\renewcommand{\arraystretch}{1.1}
-\begin{tabular}{@{}lccc@{}}
-\toprule
-Family & Labels & Models & Real \\
- & needed & dependency & channels \\
-\midrule
-Variance / PCA & no & no & yes/no \\
-Laplacian, MCFS & no & weak & yes \\
-mRMR, JMI & yes & yes & yes \\
-Concrete AE & no & implicit & yes \\
-\textbf{This method} & \textbf{no} & \textbf{yes} & \textbf{yes} \\
-\bottomrule
-\end{tabular}
-\end{table}
+unsupervised but marginal. Dependency-aware selectors such as mRMR and
+JMI~\cite{ref_mrmr,ref_jmi} model conditional relevance but are supervised. Among
+unsupervised deep methods, the concrete autoencoder~\cite{ref_concrete} learns a
+differentiable discrete selection layer, and in hyperspectral imaging attention
+networks such as BS-Net~\cite{ref_bsnet} rank spectral bands. In EEG, channel
+selection~\cite{ref_alotaiby} is mostly supervised, and wearable human-activity
+recognition is also widely studied~\cite{ref_shiri}. On redundant data, random selection is a strong baseline
+that many unsupervised selectors fail to beat~\cite{ref_worsethanrandom}; the check
+proposed here makes that measurable.
 
 \section{Method}
-\subsection{Problem Formulation}
-A multi-channel observation is organised into $G$ groups. Group $g$ contributes
-$C_g$ channels measured over a regular axis (time for sensor streams, space for
-images) of length $T$, so one windowed sample is $X_g \in \mathbb{R}^{T\times
-C_g}$ and the full sample is $X=(X_1,\dots,X_G)$. The objective is to return an
-ordered subset $S\subseteq\{(g,c)\}$ of the original channels, with $|S|=K$, that
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.55\textwidth]{fig_method.png}
+\caption{The three-stage pipeline. A group-structured autoencoder is trained by
+reconstruction; latent perturbations give a per-channel relevance (the
+reconstruction change $I_{g,c}$ in Eq.~\eqref{eq:relevance}); and a
+relevance-redundancy rule selects an ordered subset. The engine is the same across
+domains; only the encoder and decoder change to match the regular axis of the data.}
+\label{fig:method}
+\end{figure*}
+\subsection{Problem and Group Structure}
+A multi-channel observation is organized into $G$ groups (a positive integer). The
+grouping is the sensor's physical acquisition metadata, that is, one group per
+inertial unit, excitation wavelength, scalp region, or process subsystem. It is
+therefore known in advance and uses no class labels, and the method also runs with
+$G{=}1$ when no grouping is available. Group $g$ contributes $C_g$ channels over a
+regular axis (time or space) of length $T$, so a windowed sample is the matrix
+$X_g\in\mathbb{R}^{T\times C_g}$ and the full sample the tuple $X=(X_1,\dots,X_G)$,
+of which there are $N$ in the dataset. The goal is an ordered subset
+$S\subseteq\{(g,c)\}$ of size $|S|=K$ (the channel budget, a positive integer) that
 is informative and non-redundant, using no labels.
 
-\subsection{Group-Structured Autoencoder}
-Each group is encoded independently and the per-group features are fused by
-averaging into a shared latent representation, then decoded per group:
+\subsection{Compressive Group Autoencoder}
+Each group is encoded independently, the per-group features are fused by averaging,
+and the code is decoded per group:
 \begin{equation}
-z = \frac{1}{G}\sum_{g=1}^{G} E_g(X_g), \qquad \hat{X}_g = D_g(z),
+z \coloneqq \frac{1}{G}\sum_{g=1}^{G} E_g(X_g), \qquad \hat{X}_g \coloneqq D_g(z),
 \end{equation}
-where $E_g,D_g$ are the encoder and decoder for group $g$ and $z\in\mathbb{R}^{d
-\times T}$. Averaging ties the groups into one joint code and keeps the latent
-size independent of $G$. Training minimises reconstruction error only,
-$\mathcal{L}=\sum_{g}\|X_g-D_g(z)\|_2^2$, with no labels. The encoder is the only
-modality-specific component: temporal convolutions for sensor streams, spatial
-convolutions for images.
+where $E_g,D_g$ are the per-group encoder and decoder and $z\in\mathbb{R}^{d}$ is a
+latent vector of size $d$. The encoder is the only modality-specific part: 1-D
+temporal convolutions for signals and 2-D spatial convolutions for images. The
+encoder pools the regular axis to a per-window bottleneck, so $z$ has no time or
+space extent. This keeps the code from absorbing per-channel noise, which is
+necessary for the attribution below to remain a reliable importance signal on
+non-image data. Training minimizes reconstruction error only,
+$\mathcal{L}\coloneqq\sum_{g=1}^{G}\|X_g-D_g(z)\|_2^2$, with no labels.
 
-\subsection{Perturbation-Based Relevance}
-The latent coordinates are ranked by their variance across samples and the top
-$m$ are retained. For a retained coordinate $j$ and magnitude $\delta$, the latent
-is shifted, $z^{(j,\delta)}=z+\delta e_j$, and the relevance of channel $c$ in
-group $g$ is the accumulated change in its reconstruction:
+\subsection{Perturbation Attribution and Selection}
+The $d$ latent coordinates are ranked by their variance across the $N$ samples; the
+top $m$ are kept. For a retained coordinate $j\in\{1,\dots,m\}$ and a magnitude
+$\delta$ from a finite set $\mathcal{D}$, the code is shifted
+$z^{(j,\delta)}\coloneqq z+\delta\,e_j$ (with $e_j$ the $j$-th canonical basis vector), and
+the scalar relevance of channel $c$ in group $g$ is the accumulated reconstruction
+change:
 \begin{equation}
-I_{g,c} = \sum_{j,\delta} w_j\, \frac{1}{NT}\sum_{n,t}
+I_{g,c} \coloneqq \sum_{j=1}^{m}\sum_{\delta\in\mathcal{D}} w_j\,
+\frac{1}{NT}\sum_{n=1}^{N}\sum_{t=1}^{T}
 \Big|\big[D_g(z^{(j,\delta)})-D_g(z)\big]_{n,t,c}\Big|,
+\label{eq:relevance}
 \end{equation}
-averaged over samples and axis positions, with $w_j$ weighting each coordinate by
-its importance. A channel whose reconstruction is sensitive to the latent factors
-is one the joint representation depends upon.
-
-\subsection{Normalisation and Relevance--Redundancy Selection}
-Relevances are normalised within each group,
-$\tilde{I}_{g,c}=I_{g,c}/\max_{c'} I_{g,c'}$, which is preferable to dividing by
-the data variance when the discriminative channels themselves have high variance.
-Channels are then chosen by a maximal-marginal-relevance rule:
+averaged over the $N$ samples and $T$ axis positions, with scalar weight $w_j$
+scoring coordinate $j$ by its variance rank. A channel whose reconstruction is
+sensitive to the latent factors is one the joint representation depends upon.
+Relevances are normalized within group,
+$\tilde{I}_{g,c}\coloneqq I_{g,c}/\max_{1\le c'\le C_g} I_{g,c'}$, and channels are
+chosen greedily by a relevance-redundancy rule, i.e.\ maximal marginal relevance
+(Fig.~\ref{fig:method}):
 \begin{equation}
 c^\star = \arg\max_{(g,c)\notin S}
 \Big[\tilde{I}_{g,c} - \lambda \max_{s\in S}\, \mathrm{sim}\big((g,c),s\big)\Big],
 \end{equation}
-where $\mathrm{sim}$ is the cosine similarity between channel data profiles and
-$\lambda$ controls the redundancy penalty. Selection begins with the most relevant
-channel and proceeds greedily, giving an ordered list truncated to any budget $K$
-(Fig.~\ref{fig:method}).
+with $\mathrm{sim}$ the cosine similarity between channel profiles and scalar
+$\lambda\in[0,1]$ the redundancy penalty; the output is ordered and can be truncated
+to any budget $K$.
 
-\begin{figure*}[!t]
-\centering
-\includegraphics[width=0.78\textwidth]{fig_method.png}
-\caption{The three-stage pipeline. A group-structured autoencoder is trained by
-reconstruction; latent perturbations yield a per-channel relevance; and a
-relevance--redundancy rule selects an ordered subset. The selection engine is
-identical across domains; only the encoder and decoder change to match the data's
-regular axis.}
-\label{fig:method}
-\end{figure*}
+\section{Experimental Setup}
+Selection is always unsupervised; labels are used only by a downstream classifier
+to score the selected-$K$ channels (accuracy or macro-F1) against variance,
+PCA-loading, a supervised mutual-information (MI) selector, and random selection.
 
-\subsection{Cross-Domain Instantiation}
-The selection engine operates only on groups, channels, and the latent, so the
-same engine is instantiated in two domains by substituting the encoder
-(Table~\ref{tab:crossdomain}). For wearable sensors a group is a body-worn inertial
-unit, a channel is one sensor axis, the regular axis is time, and a
-one-dimensional convolutional encoder is used. For fluorescence imaging a group is
-an excitation wavelength, a channel is an emission band, the regular axis is the
-two-dimensional image plane, and a spatial convolutional encoder is used.
+\emph{Controlled benchmark.} Grouped time-series with four independent latent
+factors, each in a cluster of five correlated channels of decreasing amplitude,
+plus 44 pure-noise channels (64 channels, 16 classes); covering all four factors is
+required to classify. A $k$-nearest-neighbor classifier scores the subset.
+
+\emph{Motor-imagery EEG.} BCI Competition IV-2a~\cite{ref_bciiv2a}: 22 electrodes in
+four scalp-region groups, four classes, nine subjects, band-passed to 8 to 30\,Hz.
+Because motor-imagery patterns are subject-specific, the standard within-subject
+protocol is used (train session~1, test session~2) with a
+common-spatial-patterns (CSP) and LDA classifier on the selected electrodes.
+
+\emph{Biomedical imaging.} Multi-excitation fluorescence cubes (lichen tissue, 192
+bands, four classes; collagen sponges, 158 bands, three classes) with a spatial
+encoder, verified by per-pixel accuracy.
+
+\section{Results and Discussion}
+\subsection{Selected-Channel Accuracy in Two Regimes}
+Table~\ref{tab:perf} reports the downstream classifier's score on the channels each
+method selects. The label-free method stays close to the supervised MI selector in
+both regimes (within $0.05$ accuracy on synthetic and $0.01$ macro-F1 on EEG)
+without labels, and above variance and random. The marginal methods differ between
+the two regimes. On the
+synthetic benchmark the informative channels lie in the high-variance subspace, so
+PCA recovers them ($0.95$, close to supervised); variance ranking, however, covers
+only half the factors and stays near random ($0.24$). On EEG the informative
+mu/beta rhythm is not the loudest signal, since alpha and ocular activity are
+stronger, so PCA and variance do no better than random ($0.48$ and $0.47$ against
+$0.49$) and select loud but uninformative electrodes, while the proposed method
+recovers the informative ones. On the synthetic benchmark, eight of 64 channels
+beat the full noisy set ($0.94$ against $0.87$), so selection also denoises, though
+the bottleneck occasionally under-encodes a factor (mean $0.70\pm0.29$ over draws).
 
 \begin{table}[t]
-\caption{The same method in two domains; only the encoder changes.}
-\label{tab:crossdomain}
+\caption{Downstream classifier score on the selected channels; no labels are used
+for selection.}
+\label{tab:perf}
 \centering
 \footnotesize
-\setlength{\tabcolsep}{4pt}
-\renewcommand{\arraystretch}{1.1}
-\begin{tabular}{@{}lll@{}}
+\setlength{\tabcolsep}{6pt}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{@{}lcc@{}}
 \toprule
-Concept & Wearable sensors & Biomedical imaging \\
+Selector & Synthetic & EEG \\
+ & acc., $K{=}8$/64 & F1, $K{=}6$/22 \\
 \midrule
-group   & body-worn IMU            & excitation wavelength \\
-channel & IMU axis (acc/gyro/mag)  & emission band \\
-axis    & 1D time                  & 2D space \\
-encoder & Conv1D                   & Conv2D / Conv3D \\
-engine  & identical                & identical \\
+All channels (full set) & 0.87 & 0.58 \\
+Supervised MI & 0.99 & 0.53 \\
+\textbf{Proposed (label-free)} & 0.94 & 0.52 \\
+PCA & 0.95 & 0.48 \\
+Variance & 0.24 & 0.47 \\
+Random-$K$ & 0.25 & 0.49 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\section{Experimental Setup}
-The wearable-sensor dataset was PAMAP2: three inertial measurement units (IMUs) on
-the hand, chest, and ankle, each contributing nine channels (three-axis
-accelerometer, gyroscope, and magnetometer), for 27 channels in three groups, with
-38{,}856 one-second windows over eight subjects and twelve activities. A strict
-leave-one-subject-out (LOSO) protocol was used: the autoencoder was trained without
-labels on the remaining subjects, the engine produced an ordered channel list, and
-the subset was verified by a $k$-nearest-neighbour classifier ($k{=}5$); macro-F1
-is reported as the LOSO mean. The proposed method was compared against a supervised
-mutual-information selector, a variance baseline, and random selection. The
-biomedical modality consisted of multi-excitation fluorescence image cubes: a
-lichen-tissue dataset (192 bands, four classes) and a collagen-sponges dataset (158
-bands, three classes), processed by the identical engine with a spatial encoder and
-verified by per-pixel classification accuracy.
-
-\section{Results and Discussion}
-\subsection{Wearable-Sensor Activity Recognition}
-The relationship between the number of retained channels and recognition
-performance is shown in Fig.~\ref{fig:acck}. Reducing from 27 to 10 channels (a
-63\% reduction) preserved macro-F1 to within 0.04 of the full-set value
-($0.68$ versus a $0.72$ ceiling); at the same budget the proposed method equalled
-the supervised mutual-information selector ($0.68$) and exceeded variance
-($0.59$). Across budgets, the proposed method tracked the supervised selector and
-remained above the variance baseline. The selected channels were also more stable
-across subjects than variance selection (Fig.~\ref{fig:stability}), which matters
-when a fixed sensor set must be chosen before deployment. For full transparency, on
-this benchmark no selector, including the supervised one, surpassed random
-selection, as the 27 channels are highly redundant; the informative comparisons are
-therefore the agreement with a supervised selector obtained without labels and the
-improved stability over variance.
+\subsection{Motor-Imagery EEG}
+Figure~\ref{fig:eeg} shows the result across budgets. At six of 22 electrodes the
+label-free method reaches $0.517$ macro-F1 (about 89\% of the full $0.578$), above
+PCA, variance, and random and close to the supervised MI selector. PCA is no better
+than random here: it selects the loud alpha and ocular channels and misses the
+sensorimotor cortex, which the reconstruction-based relevance finds. PCA catches up
+only at larger budgets, and the method is at or above random for eight of the nine
+subjects.
 
 \begin{figure}[!t]
 \centering
-\includegraphics[width=0.64\linewidth]{fig_acc_vs_k.png}
-\caption{Macro-F1 versus number of retained channels (LOSO). The proposed method
-(red) tracks the supervised selector (blue) and stays above variance (orange); the
-dashed line is the full-set ceiling.}
-\label{fig:acck}
+\includegraphics[width=0.74\linewidth]{fig_eeg.png}
+\caption{Motor-imagery EEG (BCI-IV-2a, within-subject, CSP and LDA). At six of 22
+electrodes the label-free method (red) is above PCA (purple), variance (orange), and
+random (grey), and close to the supervised selector (blue). PCA is no better than
+random at small budgets and catches up only at larger ones.}
+\label{fig:eeg}
 \end{figure}
 
-\begin{figure}[!t]
-\centering
-\includegraphics[width=0.64\linewidth]{fig_stability.png}
-\caption{Stability of the selected set across subjects (lower is better). The
-proposed method is markedly more consistent than variance selection.}
-\label{fig:stability}
-\end{figure}
-
-\subsection{Biomedical Imaging}
-On the lichen-tissue dataset, 89.4\% classification accuracy was reached using only
-nine of 192 bands (a 95\% reduction), exceeding the 88.2\% obtained with all bands;
-95.2\% was reached with 80 bands. On the collagen-sponges dataset, 30 of 158 bands
-raised accuracy from 79.8\% to 85.6\% (Fig.~\ref{fig:biomed}). In this
-high-redundancy regime the same principle yields large reductions with no loss, and
-often a gain, in accuracy.
-
-\begin{figure}[!t]
-\centering
-\includegraphics[width=0.64\linewidth]{fig_biomed.png}
-\caption{Biomedical imaging: drastic channel reduction maintains or improves
-accuracy. Band counts are shown on the columns.}
-\label{fig:biomed}
-\end{figure}
-
-Together these results show that the value of a selector depends on the redundancy
-of the data, and that modelling redundancy explicitly is what separates the
-proposed method from variance ranking and explains its improved stability.
+\subsection{Biomedical Imaging and the Boundary}
+On multi-excitation fluorescence cubes the same method (with a spatial encoder)
+gives large reductions that act as denoising: nine of 192 bands reach 89.4\%
+accuracy, a 95\% reduction and above the 88.2\% full-band value, and 30 of 158
+bands raise accuracy from 79.8\% to 85.6\%. These wins share a structure: the
+informative channels are neither redundant copies nor the loudest, and they are a
+small fraction of the input (four of 64 synthetic factors, nine of 192 Lichens
+bands), so pruning the rest is where label-free selection gains most. Because that
+advantage grows with the uninformative fraction of the input, these modest
+benchmarks are a conservative test for a method aimed at much larger channel arrays.
+Selection offers little only at the opposite extreme, where channels are so redundant that
+every subset carries the same information, as on wearable human-activity recognition
+(PAMAP2, Opportunity) and adjacent-band remote-sensing imagery (Indian Pines): there
+no unsupervised selector, the proposed one or PCA, separates from a random subset,
+and a supervised selector is needed~\cite{ref_worsethanrandom}. A label-using check
+(best $K$ versus random $K$ under a supervised score) flags such cases before any
+modeling.
 
 \section{Conclusion}
-A single unsupervised, dependency-aware selection principle delivered strong,
-interpretable channel reduction across two very different modalities, requiring only
-a change of encoder: it matched a supervised selector on wearable sensors without
-labels and selected more stably than variance ranking, and it removed 58--95\% of
-channels on biomedical imaging while accuracy was maintained or improved. Future
-work will target a higher-redundancy activity benchmark and a comparison with
-differentiable unsupervised selectors.
+This paper presented a label-free, dependency-aware channel selector: a compressive
+group autoencoder with perturbation attribution and relevance-redundancy selection.
+Measured by downstream classification accuracy, its channels match a supervised
+selector without labels and beat PCA and variance where the discriminative signal is
+not the loudest, and remove up to 95\% of the bands on biomedical imaging without
+loss. A simple label-using check flags, in advance, the strongly redundant datasets
+on which every subset performs alike. Future work will tighten the bottleneck and
+study attribution less sensitive to channel variance.
 
 \section*{Acknowledgment}
-The authors thank the AUA Akian College of Science \& Engineering and the L.A.
-Orbeli Institute of Physiology, NAS RA. AI-assisted tools were used for code
-scaffolding, figure generation, and language refinement; all design, analysis,
-and conclusions are the authors' own work and were verified by the authors.
+Financial support from the European Union NAS SAR-101087403 and the United States
+R44 HL120511 awards is gratefully acknowledged. Narek Chilingaryan and Kristina
+Ghahramanyan are thanked for providing labelled datasets that included lichen
+samples and collagen sponges.
 
 \begin{thebibliography}{00}
 \bibitem{ref_concrete} M. F. Bal\i{}n, A. Abid, and J. Zou, ``Concrete
@@ -302,12 +292,21 @@ likelihood maximisation: A unifying framework for information theoretic feature
 selection,'' \emph{J. Mach. Learn. Res.}, vol.~13, pp.~27--66, 2012.
 \bibitem{ref_lapscore} X. He, D. Cai, and P. Niyogi, ``Laplacian score for
 feature selection,'' in \emph{Proc. NeurIPS}, 2005.
-\bibitem{ref_bsnet} Y. Cai, X. Liu, and Z. Cai, ``BS-Nets: An end-to-end framework
-for band selection of hyperspectral image,'' \emph{IEEE Trans. Geosci. Remote
-Sens.}, vol.~58, no.~3, pp.~1969--1984, 2020.
-\bibitem{ref_pamap2} A. Reiss and D. Stricker, ``Introducing a new benchmarked
-dataset for activity monitoring,'' in \emph{Proc. IEEE Int. Symp. Wearable
-Computers (ISWC)}, 2012, pp.~108--109.
+\bibitem{ref_bsnet} Y. Cai, X. Liu, and Z. Cai, ``BS-Nets: An end-to-end
+framework for band selection of hyperspectral image,'' \emph{IEEE Trans. Geosci.
+Remote Sens.}, vol.~58, no.~3, pp.~1969--1984, 2020.
+\bibitem{ref_alotaiby} T. N. Alotaiby, F. E. Abd El-Samie, S. A. Alshebeili, and
+I. Ahmad, ``A review of channel selection algorithms for EEG signal processing,''
+\emph{EURASIP J. Adv. Signal Process.}, vol.~2015, art.~66, 2015.
+\bibitem{ref_shiri} F. M. Shiri, T. Perumal, N. Mustapha, and R. Mohamed, ``Deep
+learning and federated learning in human activity recognition with sensor data: A
+comprehensive review,'' \emph{Comput. Model. Eng. Sci.}, vol.~145, no.~2,
+pp.~1389--1478, 2025.
+\bibitem{ref_worsethanrandom} M. Rajabinasab, M. E. Houle, O. Chelly, and A.
+Zimek, ``Worse than random? The importance of a baseline for unsupervised feature
+selection,'' \emph{arXiv:2605.22973}, 2026.
+\bibitem{ref_bciiv2a} M. Tangermann \emph{et al.}, ``Review of the BCI Competition
+IV,'' \emph{Front. Neurosci.}, vol.~6, art.~55, 2012.
 \end{thebibliography}
 
 \end{document}

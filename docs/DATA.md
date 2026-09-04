@@ -1,5 +1,7 @@
 # Dataset Contract
 
+> The full data guide for new team members (raw folder contract, metadata spreadsheets, `.im3` internals, pickle dialects, annotation formats, catalogue with shapes) is [`onboarding/DATA_GUIDE.md`](onboarding/DATA_GUIDE.md). This file is the short inventory.
+
 The `Data/` directory is **gitignored** — datasets are not version-controlled. This file documents
 what is canonical, where it lives, and which code consumes it, so the data layer is reproducible
 without committing gigabytes of binaries.

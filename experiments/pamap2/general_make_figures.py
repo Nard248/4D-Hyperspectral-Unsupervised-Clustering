@@ -13,8 +13,11 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.patches import FancyBboxPatch, FancyArrowPatch
 
-OUT = Path("generalization/figures"); OUT.mkdir(parents=True, exist_ok=True)
-plt.rcParams.update({"font.size": 11})
+OUT = Path("publications/generalization/figures"); OUT.mkdir(parents=True, exist_ok=True)
+plt.rcParams.update({
+    "font.size": 8, "axes.labelsize": 8, "axes.titlesize": 9,
+    "xtick.labelsize": 7, "ytick.labelsize": 7, "legend.fontsize": 7,
+})
 
 K = np.array([5, 7, 10])
 # full-LOSO macro-F1 (mean, std). AE from general_pamap2_loso.py; MI/var/rand from
@@ -29,21 +32,19 @@ CEILING = 0.722  # all 27 channels, KNN-5 LOSO
 
 
 def fig_acc_vs_k():
-    fig, ax = plt.subplots(figsize=(7.2, 4.6))
-    ax.axhline(CEILING, ls="--", color="#2ecc71", lw=1.5, label=f"All 27 channels (ceiling) = {CEILING:.2f}")
+    fig, ax = plt.subplots(figsize=(3.5, 2.7))
+    ax.axhline(CEILING, ls="--", color="#2ecc71", lw=1.5, label=f"All 27 ch. (ceiling) = {CEILING:.2f}")
     for name, (m, s, color, mk) in SERIES.items():
-        ax.errorbar(K, m, yerr=s, marker=mk, color=color, capsize=3, lw=2, ms=7, label=name)
+        ax.errorbar(K, m, yerr=s, marker=mk, color=color, capsize=3, lw=1.6, ms=5, label=name)
     ax.set_xlabel("Number of selected channels (K)")
-    ax.set_ylabel("Macro-F1  (leave-one-subject-out)")
-    ax.set_title("PAMAP2 HAR: channel selection vs. baselines")
-    ax.set_xticks(K); ax.grid(alpha=0.3); ax.legend(fontsize=9, loc="lower right")
-    fig.text(0.01, 0.005, "Label-free AE-perturb matches the SUPERVISED selector and beats variance; "
-             "no method beats random (dataset is intrinsically redundant).", fontsize=7.5, color="#555")
-    fig.tight_layout(rect=[0, 0.03, 1, 1]); fig.savefig(OUT / "fig_acc_vs_k.png", dpi=150); plt.close(fig)
+    ax.set_ylabel("Macro-F1 (LOSO)")
+    ax.set_title("PAMAP2 HAR: selection vs. baselines")
+    ax.set_xticks(K); ax.grid(alpha=0.3); ax.legend(fontsize=6, loc="lower right")
+    fig.tight_layout(); fig.savefig(OUT / "fig_acc_vs_k.png", dpi=200); plt.close(fig)
 
 
 def fig_stability():
-    fig, ax = plt.subplots(figsize=(6.0, 4.2))
+    fig, ax = plt.subplots(figsize=(3.5, 2.7))
     labels = ["K=5", "K=7", "K=10"]
     ae_std = [0.090, 0.073, 0.081]
     var_std = [0.142, 0.162, 0.174]
@@ -54,7 +55,7 @@ def fig_stability():
     ax.set_ylabel("Std of macro-F1 across subjects\n(lower = more stable)")
     ax.set_title("Selection stability across subjects (LOSO)")
     ax.legend(); ax.grid(alpha=0.3, axis="y")
-    fig.tight_layout(); fig.savefig(OUT / "fig_stability.png", dpi=150); plt.close(fig)
+    fig.tight_layout(); fig.savefig(OUT / "fig_stability.png", dpi=200); plt.close(fig)
 
 
 def _box(ax, x, y, w, h, text, fc):
@@ -79,7 +80,7 @@ def fig_method():
     _box(ax, 2.1, 0.5, 1.6, 1.0, "per-group\nencoder", "#e8f6ef")
     _box(ax, 4.2, 1.45, 1.4, 1.0, "mean\nfusion", "#fdecd2")
     _box(ax, 6.1, 1.45, 1.5, 1.0, "latent z\n(perturb)", "#fde0dc")
-    _box(ax, 8.1, 1.45, 1.7, 1.0, "decode →\nΔrecon /\nchannel", "#e8f6ef")
+    _box(ax, 8.1, 1.45, 1.7, 1.0, "decode →\nper-channel\nrecon. change", "#e8f6ef")
     _box(ax, 10.3, 1.45, 1.5, 1.0, "MMR\nselect K", "#ead9f2")
     for y in (2.9, 1.0):
         _arrow(ax, 1.6, y, 2.1, y if y > 1.5 else y)
@@ -122,7 +123,7 @@ def fig_biomed():
     """Biomedical verification: drastic channel reduction maintains/improves accuracy.
     Band counts are placed ON the columns (all vs selected). Numbers are existing
     verified results (Lichens, Collagen sponges)."""
-    fig, ax = plt.subplots(figsize=(7.0, 4.3))
+    fig, ax = plt.subplots(figsize=(3.5, 2.7))
     groups = ["Lichens", "Collagen sponges"]
     full = [88.2, 79.8]; full_bands = [192, 158]   # all channels
     sel = [89.4, 85.6];  sel_bands = [9, 30]        # selected subset
@@ -130,18 +131,18 @@ def fig_biomed():
     ax.bar(x - w/2, full, w, color="#95a5a6", label="All channels")
     ax.bar(x + w/2, sel, w, color="#c0392b", label="Selected subset")
     for i in range(2):
-        ax.text(x[i] - w/2, full[i] + 0.6, f"{full[i]:.1f}%", ha="center", fontsize=9)
-        ax.text(x[i] + w/2, sel[i] + 0.6, f"{sel[i]:.1f}%", ha="center", fontsize=9, color="#c0392b")
+        ax.text(x[i] - w/2, full[i] + 0.6, f"{full[i]:.1f}%", ha="center", fontsize=8)
+        ax.text(x[i] + w/2, sel[i] + 0.6, f"{sel[i]:.1f}%", ha="center", fontsize=8, color="#c0392b")
         # band counts ON the columns (mid-bar, clear of the legend)
         ax.text(x[i] - w/2, 72, f"{full_bands[i]}\nbands", ha="center", va="center",
-                fontsize=11, color="white", weight="bold")
+                fontsize=8, color="white", weight="bold")
         ax.text(x[i] + w/2, 72, f"{sel_bands[i]}\nbands", ha="center", va="center",
-                fontsize=11, color="white", weight="bold")
-    ax.set_xticks(x); ax.set_xticklabels(groups, fontsize=11)
+                fontsize=8, color="white", weight="bold")
+    ax.set_xticks(x); ax.set_xticklabels(groups, fontsize=8)
     ax.set_ylabel("Classification accuracy (%)"); ax.set_ylim(60, 100)
-    ax.set_title("Biomedical imaging: drastic reduction, same-or-better accuracy", fontsize=11)
-    ax.legend(loc="upper left", fontsize=9, framealpha=0.9); ax.grid(alpha=0.3, axis="y")
-    fig.tight_layout(); fig.savefig(OUT / "fig_biomed.png", dpi=150); plt.close(fig)
+    ax.set_title("Biomedical imaging: fewer channels, same-or-better accuracy", fontsize=9)
+    ax.legend(loc="upper left", fontsize=7, framealpha=0.9); ax.grid(alpha=0.3, axis="y")
+    fig.tight_layout(); fig.savefig(OUT / "fig_biomed.png", dpi=200); plt.close(fig)
 
 
 def fig_har_selection():

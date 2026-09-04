@@ -2,10 +2,13 @@
 
 Welcome to the Spectral-Select documentation. This guide will help you understand and use the hyperspectral wavelength selection toolkit.
 
+> **New to the team?** Start with [`onboarding/README.md`](onboarding/README.md): environment setup for macOS / Windows / Linux (including the Java stack for `.im3` files), the data guide, the hands-on walkthrough notebook, and one technical guide per component.
+
 ## Quick Links
 
 | I want to... | Read this |
 |--------------|-----------|
+| Onboard as a new team member | [Onboarding](onboarding/README.md), [Setup](onboarding/SETUP.md), [Data guide](onboarding/DATA_GUIDE.md), [Component guides](onboarding/components/README.md) |
 | Get started quickly | [Quick Reference](QUICKREF.md) |
 | Install the software | [Installation Guide](INSTALLATION.md) |
 | Understand the concepts | [User Guide](USER_GUIDE.md) |
@@ -25,6 +28,8 @@ docs/
 ├── INSTALLATION.md        # Installation and setup instructions
 ├── CONFIGURATION.md       # All configuration parameters
 ├── TROUBLESHOOTING.md     # Common problems and solutions
+├── onboarding/            # New-member path: README (start here), SETUP, DATA_GUIDE, components/*.md
+├── spectraforge/          # SpectraForge system overview, investigation findings, architecture plan, runbook
 └── guides/
     ├── DATA_PROCESSING.md      # How to prepare your data
     ├── WAVELENGTH_SELECTION.md # How to run analysis
@@ -52,13 +57,13 @@ Jupyter notebooks provide hands-on tutorials:
 
 | Notebook | Description |
 |----------|-------------|
-| `notebooks/examples/01_quickstart.ipynb` | Basic wavelength selection workflow |
-| `notebooks/examples/02_validation.ipynb` | Validating results against ground truth |
+| `examples/03_hsi_data_walkthrough.ipynb` | Data layer end to end: open `.im3` cubes and 4D pickles, store, view, spectra, statistics, preprocessing |
+| `examples/01_quickstart.ipynb` | Basic wavelength selection workflow |
+| `examples/02_validation.ipynb` | Validating results against ground truth |
 
 To run:
 ```bash
-cd notebooks/examples
-jupyter notebook
+jupyter lab examples/
 ```
 
 ## Key Concepts

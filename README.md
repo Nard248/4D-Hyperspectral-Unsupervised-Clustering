@@ -29,7 +29,9 @@ For development (testing, notebooks):
 pip install -e ".[dev]"
 ```
 
-Requires Python >= 3.11. See `pyproject.toml` for the full dependency list.
+Extras: `[gui]` (PyQt6 for the two GUIs), `[im3]` (PyImageJ for reading raw Nuance `.im3` cubes; needs a JDK
+and Maven), `[all]` (everything). Requires Python >= 3.11. Full platform-by-platform instructions, including the
+Java stack, GPU setup and where to get the data: [`docs/onboarding/SETUP.md`](docs/onboarding/SETUP.md).
 
 ## Quick Start
 
@@ -132,7 +134,9 @@ See [`experiments/README.md`](experiments/README.md) for instructions to reprodu
 
 ## Documentation
 
-See the [`docs/`](docs/) directory and [`examples/`](examples/) notebooks for detailed usage guides.
+**New team members: start at [`docs/onboarding/`](docs/onboarding/README.md)** (setup, data guide, the
+`examples/03_hsi_data_walkthrough.ipynb` notebook, and a technical guide per component). See the [`docs/`](docs/)
+directory and [`examples/`](examples/) notebooks for the rest.
 
 ## Citation
 
